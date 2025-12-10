@@ -19,22 +19,127 @@ from adafruit_datetime import datetime, date, time
 from adafruit_ina219 import ADCResolution, BusVoltageRange, INA219
 
 try:
+    sdcard = adafruit_sdcard.SDCard(busio.SPI(board.GP10,MOSI=board.GP11,MISO=board.GP12),digitalio.DigitalInOut(board.GP13))
+    vfs = storage.VfsFat(sdcard)
+    storage.mount(vfs, "/sd")
+    I2C0 = busio.I2C(board.GP1,board.GP0,frequency=10000)
+    
+    doSendGps = False
+    doSendAlt = False
+    doSendImu = False
+    doSendMag = False
+    doSendPow = False
+    
     class GPS:
         def __init__(self):
-            self.interface = adafruit_gps.GPS(busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10),debug=False)
+            try:
+                self.interface = adafruit_gps.GPS(busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10),debug=False)
+                
+                self.interface.send_command(b'PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0') #Issues parameters to GPS
+                self.interface.send_command(b'PMTK220,1000')
+            except:
+                radio.sendString("Failed To Setup GPS" )
         
-        def __repr__(self):
-            return ("Latitude:{:.6f}"+
-                    "Longitude:{:.6f}"+
-                    "Altitude:{:.2f}"+
-                    "Speed:{:.2f}"+
-                    "Satelites:{}"+
-                    "DOP:{}").format(
-                        self.interface.latitude,
-                        self.interface.longitude,
-                        self.interface.altitude_m,
-                        self.interface.speed_knots*(463/900)
-                    )
+        def getData(self):
+            return "GPS {:.6f} {:.6f} {:.2f} {:.2f} {} {}".format(
+                self.interface.latitude,
+                self.interface.longitude,
+                self.interface.altitude_m,
+                self.interface.speed_knots*(463/900),
+                self.interface.satellites,
+                self.interface.horizontal_dilution)
+    
+    class Altimeter:
+        def __init__(self):
+            try:
+                self.interface = adafruit_bme680.Adafruit_BME680_I2C(I2C0, address=0x77)
+
+                self.interface.sea_level_pressure = 1013.25
+                
+                self.interface.pressure_oversampling = 8
+                self.interface.temperature_oversampling = 2
+            except:
+                radio.sendString("Failed To Setup Altimeter ")
+        
+        def getData(self):
+            return "ALT {:.2f} {:.2f} {:.2f} {:.2f} {:f}".format(
+                self.interface.altitude,
+                self.interface.temperature,
+                self.interface.pressure,
+                self.interface.relative_humidity,
+                round(self.interface.gas))
+            
+                
+    class IMU:
+        def __init__(self):
+            try:
+                self.interface = LSM6DSOX(I2C0,address=0x6a)
+            except:
+                radio.sendString("Failed To Setup IMU ")
+        def getData(self):
+            return "IMU {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f}".format(
+                self.interface.acceleration[0],
+                self.interface.acceleration[1],
+                self.interface.acceleration[2],                
+                self.interface.gyro[0],
+                self.interface.gyro[1],
+                self.interface.gyro[2])
+                
+    class Magnometer:
+        def __init__(self):
+            try:
+                self.interface = LIS3MDL(I2C0,address=0x1c)
+            except:
+                radio.sendString("Failed To Setup Magnometer ")
+        def getData(self):
+            return "MAG {:.2f} {:.2f} {:.2f}".format(
+                self.interface.magnetic[0],
+                self.interface.magnetic[1],
+                self.interface.magnetic[2])              
+                
+    class Power:
+        def __init__(self):
+            try:
+                self.powerDrawInterface = INA219(I2C0,addr=0x45)
+
+                self.powerDrawInterface.bus_adc_resolution = ADCResolution.ADCRES_12BIT_32S
+                self.powerDrawInterface.shunt_adc_resolution = ADCResolution.ADCRES_12BIT_32S
+                self.powerDrawInterface.bus_voltage_range = BusVoltageRange.RANGE_16V
+                
+                self.solar1Inteface = Solar(0x40)
+                self.solar2Inteface = Solar(0x41)
+                self.solar3Inteface = Solar(0x44)
+                
+                self.batteryInterface = adafruit_max1704x.MAX17048(I2C0,address=0x36)
+            except:
+                radio.sendString("Failed To Setup Power ")
+        def getData(self):
+            return "POW {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.2f} {:.2f}".format(
+                self.powerDrawInterface.bus_voltage,
+                self.powerDrawInterface.current / 1000,
+                abs(self.powerDrawInterface.bus_voltage * (self.powerDrawInterface.current / 1000)),
+                self.solar1Inteface.bus_voltage,
+                self.solar1Inteface.current / 1000,
+                abs(self.solar1Inteface.bus_voltage * (self.solar1Inteface.current / 1000)),
+                self.solar2Inteface.bus_voltage,
+                self.solar2Inteface.current / 1000,
+                abs(self.solar2Inteface.bus_voltage * (self.solar2Inteface.current / 1000)),
+                self.solar3Inteface.bus_voltage,
+                self.solar3Inteface.current / 1000,
+                abs(self.solar3Inteface.bus_voltage * (self.solar3Inteface.current / 1000)),
+                self.batteryInterface.cell_voltage,
+                self.batteryInterface.cell_percent)
+                
+    class Solar:
+        def __init__(self, adress):
+            try:
+                self.interface = INA219(I2C0,addr=adress)
+                
+                self.interface.bus_adc_resolution = ADCResolution.ADCRES_12BIT_32S
+                self.interface.shunt_adc_resolution = ADCResolution.ADCRES_12BIT_32S
+                self.interface.bus_voltage_range = BusVoltageRange.RANGE_16V
+            except:
+                radio.sendString("Failed To Setup Solar ")
     
     class LED:
         def __init__(self, boardPin):
@@ -79,6 +184,13 @@ try:
             return self.interface.read(960)
     
     def processCommand():
+        
+        global doSendGps
+        global doSendAlt
+        global doSendImu
+        global doSendMag
+        global doSendPow
+        
         inString = str(radio.readIncoming())
         
         if(inString is not "None"):
@@ -86,13 +198,66 @@ try:
         else:
             return
         
-        inString.lower()
+        inString = inString.lower()
+        inString = inString[2:] # remove(b')
+        inString = inString.replace(" ", "")
+        inString = inString.replace("'", "")
 
-        if "ping" in inString:
-            radio.sendString("pong")
-        elif "get" in inString:
-            radio.sendString("Data Example: 100")
+        #radio.sendString("Recieved Command: " + inString + "\n")
+        try:
+            if inString[0:4] is "ping":
+                radio.sendString("pong")
+            elif inString[0:3] is "set":
+                inString = inString[3:]
+                if inString[0:6] is "dosend":
+                    inString = inString[6:]
+                    setValue = True if inString[3:7] is "true" else False
+                    radio.sendString("Set Target Value To: " + str(setValue))
+                    if inString[0:3] is "gps":
+                        doSendGps = setValue
+                    elif inString[0:3] is "alt":
+                        doSendAlt = setValue
+                    elif inString[0:3] is "imu":
+                        doSendImu = setValue
+                    elif inString[0:3] is "mag":
+                        doSendMag = setValue
+                    elif inString[0:3] is "pow":
+                        doSendPow = setValue
+            elif inString[0:3] is "get":
+                inString = inString[3:]
+                if inString[0:6] is "dosend":
+                    inString = inString[6:]
+                    if inString[0:3] is "gps":
+                        radio.sendString(str(doSendGps))
+                    elif inString[0:3] is "alt":
+                        radio.sendString(str(doSendAlt))
+                    elif inString[0:3] is "imu":
+                        radio.sendString(str(doSendImu))
+                    elif inString[0:3] is "mag":
+                        radio.sendString(str(doSendMag))
+                    elif inString[0:3] is "pow":
+                        radio.sendString(str(doSendPow))
+                elif inString[0:4] is "cube":
+                    inString = inString[4:]
+                    if inString[0:6] is "status":
+                        radio.sendString("Alive")
+            elif inString[0:5] is "reset":
+                microcontroller.reset()
+                    
+        except:
+            radio.sendString("Failed To Interpret Command")        
         
+    def sendData():
+        if doSendGps:
+            radio.sendString(gps.getData())
+        if doSendAlt:
+            radio.sendString(altimeter.getData())
+        if doSendImu:
+            radio.sendString(imu.getData())
+        if doSendMag:
+            radio.sendString(magnometer.getData())
+        if doSendPow:
+            radio.sendString(power.getData())
             
     def startupLightshow():
         gpsLED.turnOn()
@@ -122,10 +287,18 @@ try:
     receiveLED = LED(board.GP18)
     errorLED = LED(board.GP19)
     radio = Tranciever()
+    gps = GPS()
+    altimeter = Altimeter()
+    imu = IMU()
+    magnometer = Magnometer()
+    power = Power()
     startupLightshow()
+
+    radio.sendString("Cubesat Initialized")
 
     while True:
         processCommand()
+        sendData()
         clock.sleep(2)
         processLED.toggle()
         receiveLED.turnOff()
