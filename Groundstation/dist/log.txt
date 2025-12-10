@@ -2359,3 +2359,978 @@ Pressure: 836.40 Kpa
 Humidity 26.97 %
 Gas: 6890 Ohms
 Recieved: set target value to: false
+[12:45:04] Sent: set dosend pow true
+Recieved: failed to setup power 
+Recieved: cubesat initialized
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to setup power 
+Recieved: cubesat initialized
+Recieved: failed to setup power 
+Recieved: cubesat initialized
+Recieved: failed to setup power 
+Recieved: cubesat initialized
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to setup power 
+Recieved: cubesat initialized
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: cubesat initialized
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: cubesat initialized
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: cubesat initialized
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: cubesat initialized
+[12:49:20] Recieved Power Packet
+
+---Welcome To The Groundstation---
+
+[12:50:05] Initialized Transciever
+[12:50:05] Initialized Threads
+[12:50:05] Attempting To Connect
+[12:50:05] Collected 2 Ports
+[12:50:05] Checking Port: COM16 - USB Serial Device (COM16)
+[12:50:05] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:50:05] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:50:05] Assigned Port: COM17
+
+[12:50:05] Started Threads
+[12:50:09] Recieved Power Packet
+
+---Welcome To The Groundstation---
+
+[12:51:21] Initialized Transciever
+[12:51:21] Initialized Threads
+[12:51:21] Attempting To Connect
+[12:51:21] Collected 2 Ports
+[12:51:21] Checking Port: COM16 - USB Serial Device (COM16)
+[12:51:21] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:51:21] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:51:21] Assigned Port: COM17
+
+[12:51:21] Started Threads
+[12:51:23] Recieved Power Packet
+
+---Welcome To The Groundstation---
+
+[12:53:14] Initialized Transciever
+[12:53:14] Initialized Threads
+[12:53:14] Attempting To Connect
+[12:53:15] Collected 2 Ports
+[12:53:15] Checking Port: COM16 - USB Serial Device (COM16)
+[12:53:15] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:53:15] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:53:15] Assigned Port: COM17
+
+[12:53:15] Started Threads
+[12:53:17] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.16 %
+[12:53:20] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.16 %
+[12:53:21] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.16 %
+[12:53:23] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.976 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.16 %
+[12:53:26] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.16 %
+[12:53:28] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.16 %
+[12:53:30] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.16 %
+[12:53:33] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.16 %
+[12:53:35] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.16 %
+[12:53:37] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.16 %
+Recieved: cubesat initialized
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: failed to send power data
+Recieved: cubesat initialized
+[12:54:11] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.980 V
+Power Draw Current: 0.003 A
+Power Draw Wattage: 0.014 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:13] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:16] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:17] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.976 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:19] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:22] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.976 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:24] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:26] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:29] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:31] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:34] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:35] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:37] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:40] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:42] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.001 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:44] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:47] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:48] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.976 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:50] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:53] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:55] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:54:57] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.000 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+[12:55:00] Recieved Power Packet
+Recieved: 
+Power Draw Voltage: 3.972 V
+Power Draw Current: -0.000 A
+Power Draw Wattage: 0.001 W
+Solar 1 Voltage: 0.000 V
+Solar 1 Current: 0.000 A
+Solar 1 Wattage: 0.000 W
+Solar 2 Voltage: 0.000 V
+Solar 2 Current: 0.000 A
+Solar 2 Wattage: 0.000 W
+Solar 3 Voltage: 0.000 V
+Solar 3 Current: 0.000 A
+Solar 3 Wattage: 0.000 W
+Battery Voltage: 4.00 V
+Battery Percentage: 77.65 %
+Recieved: cubesat initialized
+[12:55:06] Recieved Magnometer Packet
+Recieved: 
+Magnetic Strength X: 18.25 uT
+Magnetic Strength Y: -31.91 uT
+Magnetic Strength Z: -46.40 uT
+[12:55:08] Recieved Magnometer Packet
+Recieved: 
+Magnetic Strength X: 18.25 uT
+Magnetic Strength Y: -31.91 uT
+Magnetic Strength Z: -46.40 uT
+[12:55:10] Recieved Magnometer Packet
+Recieved: 
+Magnetic Strength X: 18.25 uT
+Magnetic Strength Y: -31.91 uT
+Magnetic Strength Z: -46.40 uT
+[12:55:13] Recieved Magnometer Packet
+Recieved: 
+Magnetic Strength X: 18.25 uT
+Magnetic Strength Y: -31.91 uT
+Magnetic Strength Z: -46.40 uT
+[12:55:14] Recieved Magnometer Packet
+Recieved: 
+Magnetic Strength X: 18.25 uT
+Magnetic Strength Y: -31.91 uT
+Magnetic Strength Z: -46.40 uT
+[12:55:16] Recieved Magnometer Packet
+Recieved: 
+Magnetic Strength X: 18.25 uT
+Magnetic Strength Y: -31.91 uT
+Magnetic Strength Z: -46.40 uT
+[12:55:19] Recieved Magnometer Packet
+Recieved: 
+Magnetic Strength X: 18.25 uT
+Magnetic Strength Y: -31.91 uT
+Magnetic Strength Z: -46.40 uT
+Recieved: cubesat initialized
+[12:55:27] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.18 m/s^2
+Acceleration Y: 0.00 m/s^2
+Acceleration Z: 10.17 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:55:29] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.17 m/s^2
+Acceleration Y: 0.01 m/s^2
+Acceleration Z: 10.15 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:55:32] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.17 m/s^2
+Acceleration Y: 0.00 m/s^2
+Acceleration Z: 10.14 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.02 Rad/s
+[12:55:33] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.18 m/s^2
+Acceleration Y: -0.00 m/s^2
+Acceleration Z: 10.15 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.02 Rad/s
+[12:55:35] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.18 m/s^2
+Acceleration Y: 0.02 m/s^2
+Acceleration Z: 10.15 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:55:38] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.17 m/s^2
+Acceleration Y: 0.01 m/s^2
+Acceleration Z: 10.16 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:55:40] Recieved IMU Packet
+Recieved: 
+Acceleration X: 0.52 m/s^2
+Acceleration Y: 1.37 m/s^2
+Acceleration Z: 9.21 m/s^2
+Rotation X: -0.32 Rad/s
+Rotation Y: -0.39 Rad/s
+Rotation Z: -0.32 Rad/s
+[12:55:42] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.39 m/s^2
+Acceleration Y: -2.00 m/s^2
+Acceleration Z: 9.69 m/s^2
+Rotation X: 0.05 Rad/s
+Rotation Y: 0.34 Rad/s
+Rotation Z: -0.28 Rad/s
+[12:55:45] Recieved IMU Packet
+Recieved: 
+Acceleration X: 2.36 m/s^2
+Acceleration Y: -8.83 m/s^2
+Acceleration Z: 4.08 m/s^2
+Rotation X: 3.85 Rad/s
+Rotation Y: 0.59 Rad/s
+Rotation Z: 0.17 Rad/s
+[12:55:46] Recieved IMU Packet
+Recieved: 
+Acceleration X: 1.47 m/s^2
+Acceleration Y: -6.40 m/s^2
+Acceleration Z: 8.48 m/s^2
+Rotation X: 3.21 Rad/s
+Rotation Y: -0.18 Rad/s
+Rotation Z: 0.33 Rad/s
+[12:55:48] Recieved IMU Packet
+Recieved: 
+Acceleration X: 2.79 m/s^2
+Acceleration Y: -9.29 m/s^2
+Acceleration Z: -1.28 m/s^2
+Rotation X: -1.78 Rad/s
+Rotation Y: -0.30 Rad/s
+Rotation Z: 0.20 Rad/s
+[12:55:51] Recieved IMU Packet
+Recieved: 
+Acceleration X: 1.17 m/s^2
+Acceleration Y: -4.15 m/s^2
+Acceleration Z: -8.79 m/s^2
+Rotation X: 1.55 Rad/s
+Rotation Y: 0.12 Rad/s
+Rotation Z: 0.13 Rad/s
+[12:55:53] Recieved IMU Packet
+Recieved: 
+Acceleration X: 4.14 m/s^2
+Acceleration Y: 4.55 m/s^2
+Acceleration Z: -7.06 m/s^2
+Rotation X: -0.16 Rad/s
+Rotation Y: 0.03 Rad/s
+Rotation Z: -0.02 Rad/s
+[12:55:55] Recieved IMU Packet
+Recieved: 
+Acceleration X: 0.08 m/s^2
+Acceleration Y: -4.77 m/s^2
+Acceleration Z: -7.71 m/s^2
+Rotation X: 1.21 Rad/s
+Rotation Y: -0.09 Rad/s
+Rotation Z: -0.02 Rad/s
+[12:55:58] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.72 m/s^2
+Acceleration Y: 0.95 m/s^2
+Acceleration Z: 10.54 m/s^2
+Rotation X: -0.11 Rad/s
+Rotation Y: 0.04 Rad/s
+Rotation Z: 0.00 Rad/s
+[12:55:59] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.65 m/s^2
+Acceleration Y: -0.03 m/s^2
+Acceleration Z: 10.14 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:56:01] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.64 m/s^2
+Acceleration Y: -0.03 m/s^2
+Acceleration Z: 10.14 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:56:04] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.65 m/s^2
+Acceleration Y: -0.02 m/s^2
+Acceleration Z: 10.13 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:56:06] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.64 m/s^2
+Acceleration Y: -0.03 m/s^2
+Acceleration Z: 10.14 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:56:08] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.65 m/s^2
+Acceleration Y: -0.03 m/s^2
+Acceleration Z: 10.08 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.00 Rad/s
+Rotation Z: -0.02 Rad/s
+[12:56:11] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.63 m/s^2
+Acceleration Y: -0.00 m/s^2
+Acceleration Z: 10.13 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:56:12] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.64 m/s^2
+Acceleration Y: 0.02 m/s^2
+Acceleration Z: 10.14 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+Recieved: cubesat initialized
+[12:56:20] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.62 m/s^2
+Acceleration Y: -0.02 m/s^2
+Acceleration Z: 10.15 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:56:23] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.62 m/s^2
+Acceleration Y: -0.02 m/s^2
+Acceleration Z: 10.09 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:56:25] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.61 m/s^2
+Acceleration Y: -0.02 m/s^2
+Acceleration Z: 10.12 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:56:27] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.58 m/s^2
+Acceleration Y: 0.02 m/s^2
+Acceleration Z: 10.14 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:56:30] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.61 m/s^2
+Acceleration Y: -0.03 m/s^2
+Acceleration Z: 10.13 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:56:31] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.60 m/s^2
+Acceleration Y: 0.00 m/s^2
+Acceleration Z: 10.12 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:56:33] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.56 m/s^2
+Acceleration Y: -0.02 m/s^2
+Acceleration Z: 10.13 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:56:36] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.61 m/s^2
+Acceleration Y: -0.03 m/s^2
+Acceleration Z: 10.08 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:56:38] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.58 m/s^2
+Acceleration Y: 0.05 m/s^2
+Acceleration Z: 9.98 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.02 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:56:40] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.63 m/s^2
+Acceleration Y: 0.05 m/s^2
+Acceleration Z: 10.09 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.00 Rad/s
+Rotation Z: -0.02 Rad/s
+[12:56:43] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.64 m/s^2
+Acceleration Y: -0.12 m/s^2
+Acceleration Z: 10.09 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.02 Rad/s
+[12:56:44] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.64 m/s^2
+Acceleration Y: 0.02 m/s^2
+Acceleration Z: 10.15 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s
+[12:56:46] Recieved IMU Packet
+Recieved: 
+Acceleration X: -0.66 m/s^2
+Acceleration Y: -0.09 m/s^2
+Acceleration Z: 10.04 m/s^2
+Rotation X: 0.01 Rad/s
+Rotation Y: 0.01 Rad/s
+Rotation Z: -0.01 Rad/s

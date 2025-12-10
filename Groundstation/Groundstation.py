@@ -136,19 +136,19 @@ try:
                 splitPacket[3])
         elif splitPacket[0] == "pow":
             log("Recieved Power Packet")
-            newPacket += "\nPower Draw Voltage: {:.3f} V\nPower Draw Current: {:.3f} A\nPower Draw Wattage: {:.3f} W".format(
+            newPacket += "\nPower Draw Voltage: {} V\nPower Draw Current: {} A\nPower Draw Wattage: {} W".format(
                 splitPacket[1],
                 splitPacket[2],
                 splitPacket[3])
-            newPacket += "\nSolar 1 Voltage: {:.3f} V\nSolar 1 Current: {:.3f} A\nSolar 1 Wattage: {:.3f} W".format(
+            newPacket += "\nSolar 1 Voltage: {} V\nSolar 1 Current: {} A\nSolar 1 Wattage: {} W".format(
                 splitPacket[4],
                 splitPacket[5],
                 splitPacket[6])
-            newPacket += "\nSolar 2 Voltage: {:.3f} V\nSolar 2 Current: {:.3f} A\nSolar 2 Wattage: {:.3f} W".format(
+            newPacket += "\nSolar 2 Voltage: {} V\nSolar 2 Current: {} A\nSolar 2 Wattage: {} W".format(
                 splitPacket[7],
                 splitPacket[8],
                 splitPacket[9])
-            newPacket += "\nSolar 3 Voltage: {:.3f} V\nSolar 3 Current: {:.3f} A\nSolar 3 Wattage: {:.3f} W".format(
+            newPacket += "\nSolar 3 Voltage: {} V\nSolar 3 Current: {} A\nSolar 3 Wattage: {} W".format(
                 splitPacket[10],
                 splitPacket[11],
                 splitPacket[12])

@@ -23,17 +23,18 @@ try:
     vfs = storage.VfsFat(sdcard)
     storage.mount(vfs, "/sd")
     I2C0 = busio.I2C(board.GP1,board.GP0,frequency=10000)
-    
+    UART0 = busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10)
+
     doSendGps = False
     doSendAlt = False
-    doSendImu = False
+    doSendImu = True
     doSendMag = False
     doSendPow = False
     
     class GPS:
         def __init__(self):
             try:
-                self.interface = adafruit_gps.GPS(busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10),debug=False)
+                self.interface = adafruit_gps.GPS(UART0,debug=False)
                 
                 self.interface.send_command(b'PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0') #Issues parameters to GPS
                 self.interface.send_command(b'PMTK220,1000')
@@ -41,14 +42,18 @@ try:
                 radio.sendString("Failed To Setup GPS" )
         
         def getData(self):
-            return "GPS {:.6f} {:.6f} {:.2f} {:.2f} {} {}".format(
-                self.interface.latitude,
-                self.interface.longitude,
-                self.interface.altitude_m,
-                self.interface.speed_knots*(463/900),
-                self.interface.satellites,
-                self.interface.horizontal_dilution)
-    
+            try:
+                self.interface.update()
+                return "GPS {:.6f} {:.6f} {:.2f} {:.2f} {} {}".format(
+                    self.interface.latitude,
+                    self.interface.longitude,
+                    self.interface.altitude_m,
+                    self.interface.speed_knots*(463/900),
+                    self.interface.satellites,
+                    self.interface.horizontal_dilution)
+            except:
+                return "Failed To Send GPS Data"
+
     class Altimeter:
         def __init__(self):
             try:
@@ -62,14 +67,13 @@ try:
                 radio.sendString("Failed To Setup Altimeter ")
         
         def getData(self):
-            return "ALT {:.2f} {:.2f} {:.2f} {:.2f} {:f}".format(
+            return "ALT {:.2f} {:.2f} {:.2f} {:.2f} {:.0f}".format(
                 self.interface.altitude,
                 self.interface.temperature,
                 self.interface.pressure,
                 self.interface.relative_humidity,
                 round(self.interface.gas))
             
-                
     class IMU:
         def __init__(self):
             try:
@@ -114,22 +118,27 @@ try:
             except:
                 radio.sendString("Failed To Setup Power ")
         def getData(self):
-            return "POW {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.2f} {:.2f}".format(
-                self.powerDrawInterface.bus_voltage,
-                self.powerDrawInterface.current / 1000,
-                abs(self.powerDrawInterface.bus_voltage * (self.powerDrawInterface.current / 1000)),
-                self.solar1Inteface.bus_voltage,
-                self.solar1Inteface.current / 1000,
-                abs(self.solar1Inteface.bus_voltage * (self.solar1Inteface.current / 1000)),
-                self.solar2Inteface.bus_voltage,
-                self.solar2Inteface.current / 1000,
-                abs(self.solar2Inteface.bus_voltage * (self.solar2Inteface.current / 1000)),
-                self.solar3Inteface.bus_voltage,
-                self.solar3Inteface.current / 1000,
-                abs(self.solar3Inteface.bus_voltage * (self.solar3Inteface.current / 1000)),
-                self.batteryInterface.cell_voltage,
-                self.batteryInterface.cell_percent)
-                
+            try:
+                return "POW {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.2f} {:.2f}".format(
+                    self.powerDrawInterface.bus_voltage,
+                    self.powerDrawInterface.current / 1000,
+                    abs(self.powerDrawInterface.bus_voltage * (self.powerDrawInterface.current / 1000)),
+                    0,0,0,0,0,0,0,0,0,
+                    # Currently No Solar Panel Data To Send 
+                    #self.solar1Inteface.bus_voltage,
+                    #self.solar1Inteface.current / 1000,
+                    #abs(self.solar1Inteface.bus_voltage * (self.solar1Inteface.current / 1000)),
+                    #self.solar2Inteface.bus_voltage,
+                    #self.solar2Inteface.current / 1000,
+                    #abs(self.solar2Inteface.bus_voltage * (self.solar2Inteface.current / 1000)),
+                    #self.solar3Inteface.bus_voltage,
+                    #self.solar3Inteface.current / 1000,
+                    #abs(self.solar3Inteface.bus_voltage * (self.solar3Inteface.current / 1000)),
+                    self.batteryInterface.cell_voltage,
+                    self.batteryInterface.cell_percent)
+            except:
+                return "Failed To Send Power Data"
+
     class Solar:
         def __init__(self, adress):
             try:
@@ -175,7 +184,7 @@ try:
             self.interface = busio.UART(board.GP8,board.GP9,baudrate=9600,timeout=0.1)
 
         def sendString(self, string):
-            self.interface.write(string.encode("ascii"))
+            self.interface.write((string+"end_msg").encode("ascii"))
         
         def sendBytes(self, bytes):
             self.interface.write(bytes)
@@ -243,7 +252,19 @@ try:
                         radio.sendString("Alive")
             elif inString[0:5] is "reset":
                 microcontroller.reset()
-                    
+            elif inString[0:9] is "toggleled":
+                inString = inString[9:]
+                if inString[0:3] is "gps":
+                    gpsLED.toggle()
+                elif inString[0:2] is "tx":
+                    transmitLED.toggle()
+                elif inString[0:2] is "rx":
+                    receiveLED.toggle()
+                elif inString[0:2] is "sen":
+                    processLED.toggle()
+                elif inString[0:2] is "err":
+                    errorLED.toggle()
+                
         except:
             radio.sendString("Failed To Interpret Command")        
         
