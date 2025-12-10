@@ -101,55 +101,55 @@ try:
         splitPacket = packet.split(" ") # start at index 1 because index 0 is gps
         if splitPacket[0] == "gps":
             log("Recieved GPS Packet")
-            newPacket += "Latitude: {} Degress\nLongitude: {} Degrees\nAltitude: {} m\n Speed: {} m/s\nSatelites: {}\nDOP: {}".format(
+            newPacket += "\nLatitude: {} Degress\nLongitude: {} Degrees\nAltitude: {} m\n Speed: {} m/s\nSatelites: {}\nDOP: {}".format(
                 splitPacket[1],
                 splitPacket[2],
                 splitPacket[3],
                 splitPacket[4],
                 splitPacket[5],
                 splitPacket[6])
-        elif packet[0] == "alt":
+        elif splitPacket[0] == "alt":
             log("Recieved Altimeter Packet")
-            newPacket += "Altitude: {} m\nTemperature: {} C\nPressure: {} Kpa\n Humidity {} %\nGas: {} Ohms".format(
+            newPacket += "\nAltitude: {} m\nTemperature: {} C\nPressure: {} Kpa\nHumidity {} %\nGas: {} Ohms".format(
                 splitPacket[1],
                 splitPacket[2],
                 splitPacket[3],
                 splitPacket[4],
                 splitPacket[5])
-        elif packet[0] == "imu":
+        elif splitPacket[0] == "imu":
             log("Recieved IMU Packet")
-            newPacket += "Acceleration X: {} m/s^2\nAcceleration Y: {} m/s^2\nAcceleration Z: {} m/s^2\nRotation X: {} Rad/s\nRotation Y: {} Rad/s\nRotation Z: {} Rad/s".format(
+            newPacket += "\nAcceleration X: {} m/s^2\nAcceleration Y: {} m/s^2\nAcceleration Z: {} m/s^2\nRotation X: {} Rad/s\nRotation Y: {} Rad/s\nRotation Z: {} Rad/s".format(
                 splitPacket[1],
                 splitPacket[2],
                 splitPacket[3],
                 splitPacket[4],
                 splitPacket[5],
                 splitPacket[6])
-        elif packet[0] == "mag":
+        elif splitPacket[0] == "mag":
             log("Recieved Magnometer Packet")
-            newPacket += "Magnetic Strength X: {} uT\nMagnetic Strength Y: {} uT\nMagnetic Strength Z: {} uT".format(
+            newPacket += "\nMagnetic Strength X: {} uT\nMagnetic Strength Y: {} uT\nMagnetic Strength Z: {} uT".format(
                 splitPacket[1],
                 splitPacket[2],
                 splitPacket[3])
-        elif packet[0] == "pow":
+        elif splitPacket[0] == "pow":
             log("Recieved Power Packet")
-            newPacket += "Power Draw Voltage: {} V\nPower Draw Current: {} A\nPower Draw Wattage: {} W".format(
+            newPacket += "\nPower Draw Voltage: {} V\nPower Draw Current: {} A\nPower Draw Wattage: {} W".format(
                 splitPacket[1],
                 splitPacket[2],
                 splitPacket[3])
-            newPacket += "Solar 1 Voltage: {} V\Solar 1 Current: {} A\Solar 1 Wattage: {} W".format(
+            newPacket += "\nSolar 1 Voltage: {} V\Solar 1 Current: {} A\Solar 1 Wattage: {} W".format(
                 splitPacket[4],
                 splitPacket[5],
                 splitPacket[6])
-            newPacket += "Solar 2 Voltage: {} V\nSolar 2 Current: {} A\nSolar 2 Wattage: {} W".format(
+            newPacket += "\nSolar 2 Voltage: {} V\nSolar 2 Current: {} A\nSolar 2 Wattage: {} W".format(
                 splitPacket[7],
                 splitPacket[8],
                 splitPacket[9])
-            newPacket += "Solar 3 Voltage: {} V\nSolar 3 Current: {} A\nSolar 3 Wattage: {} W".format(
+            newPacket += "\nSolar 3 Voltage: {} V\nSolar 3 Current: {} A\nSolar 3 Wattage: {} W".format(
                 splitPacket[10],
                 splitPacket[11],
                 splitPacket[12])
-            newPacket += "Battery Voltage: {} V\nBattery Percentage: {} %".format(
+            newPacket += "\nBattery Voltage: {} V\nBattery Percentage: {} %".format(
                 splitPacket[13],
                 splitPacket[14])
         else: 
