@@ -1,0 +1,2361 @@
+
+---Welcome To The Groundstation---
+
+[08:32:43] Initialized Transciever
+[08:32:43] Initialized Threads
+[08:32:43] Attempting To Connect
+[08:32:43] Collected 1 Ports
+[08:32:43] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[08:32:43] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[08:32:43] Assigned Port: COM17
+
+[08:32:43] Started Threads
+[08:33:18] Sent: import board
+[08:33:18] Sent: import busio
+[08:33:18] Sent: import storage
+[08:33:18] Sent: import analogio
+[08:33:18] Sent: import digitalio
+[08:33:18] Sent: import time as clock
+[08:33:18] Sent: import microcontroller
+[08:33:18] Sent: 
+[08:33:18] Sent: import adafruit_gps
+[08:33:19] Sent: import adafruit_sdcard
+[08:33:19] Sent: import adafruit_bme680
+[08:33:19] Sent: import adafruit_max1704x
+[08:33:19] Sent: from adafruit_lis3mdl import LIS3MDL
+[08:33:19] Sent: import adafruit_pcf8591.pcf8591 as PCF
+[08:33:19] Sent: from adafruit_lsm6ds.lsm6dsox import LSM6DSOX
+[08:33:19] Sent: from adafruit_pcf8591.analog_in import AnalogIn
+[08:33:19] Sent: from adafruit_pcf8591.analog_out import AnalogOut
+[08:33:19] Sent: from adafruit_datetime import datetime, date, time
+[08:33:19] Sent: from adafruit_ina219 import ADCResolution, BusVoltageRange, INA219
+[08:33:19] Sent: 
+[08:33:19] Sent: import random
+[08:33:19] Sent: 
+[08:33:19] Sent: 
+[08:33:19] Sent: 
+[08:33:19] Sent: try:
+[08:33:19] Sent:     
+[08:33:19] Sent:     ###################################################################
+[08:33:19] Sent:     #                                                                 #
+[08:33:19] Sent:     #                     CC BY-NC-SA 4.0 License                     #
+[08:33:19] Sent:     #                                                                 #
+[08:33:20] Sent:     #   Except where otherwise noted, this code is licensed under a   #
+[08:33:20] Sent:     # Attribution-NonCommercial-ShareAlike 4.0 International License. #
+[08:33:20] Sent:     #                                                                 #
+[08:33:20] Sent:     ###################################################################
+[08:33:20] Sent: 
+[08:33:21] Sent:     ###################################################################################################################
+[08:33:22] Sent: 
+[08:33:22] Sent:     callsign = "PiCarrier" #[CHANGE BEFORE LAUNCH] Sets the callsign for the device (Line one in Configuration.txt)
+[08:33:22] Sent:     beaconInterval = 5 #Controls the interval of beacon signal (Line two in Configuration.txt)
+[08:33:22] Sent: 
+[08:33:22] Sent:     measurementInterval = 10 #Controls interval of data collection (Line three in Configuration.txt)
+[08:33:22] Sent:     maxDataNumber = 100000 #Maximum number of data measurements stored on the SD card (Line four in Configuration.txt)
+[08:33:22] Sent: 
+[08:33:22] Sent:     maxErrorNumber = 100 #Maximum number of error messages stored on the SD card (Line five in Configuration.txt)
+[08:33:22] Sent: 
+[08:33:22] Sent:     ###################################################################################################################
+[08:33:22] Sent: 
+[08:33:22] Sent:     #Establishes data pins
+[08:33:22] Sent:     I2C0 = busio.I2C(board.GP1,
+[08:33:22] Sent:                      board.GP0,
+[08:33:22] Sent:                      frequency=10000)
+[08:33:22] Sent: 
+[08:33:22] Sent:     SPI1 = busio.SPI(board.GP10,
+[08:33:22] Sent:                      MOSI=board.GP11,
+[08:33:22] Sent:                      MISO=board.GP12)
+[08:33:22] Sent: 
+[08:33:22] Sent:     CS1 = digitalio.DigitalInOut(board.GP13)
+[08:33:22] Sent: 
+[08:33:23] Sent:     UART0 = busio.UART(board.GP16,
+[08:33:23] Sent:                        board.GP17,
+[08:33:23] Sent:                        baudrate=9600,
+[08:33:23] Sent:                        timeout=10)
+[08:33:23] Sent: 
+[08:33:23] Sent:     UART1 = busio.UART(board.GP8,
+[08:33:23] Sent:                        board.GP9,
+[08:33:23] Sent:                        baudrate=9600,
+[08:33:23] Sent:                        timeout=0.1)
+[08:33:23] Sent: 
+[08:33:23] Sent:     # Sets up analog pins (may read non-zero value when not connected due to noise)
+[08:33:23] Sent:     GPIO26 = analogio.AnalogIn(board.GP26)
+[08:33:23] Sent:     GPIO27 = analogio.AnalogIn(board.GP27)
+[08:33:23] Sent:     GPIO28 = analogio.AnalogIn(board.GP28)
+[08:33:23] Sent: 
+[08:33:23] Sent:     #Established LED Outputs
+[08:33:23] Sent:     imbeddedLed = digitalio.DigitalInOut(board.GP25)
+[08:33:23] Sent:     imbeddedLed.direction = digitalio.Direction.OUTPUT
+[08:33:23] Sent: 
+[08:33:23] Sent:     processLed = digitalio.DigitalInOut(board.GP21)
+[08:33:23] Sent:     processLed.direction = digitalio.Direction.OUTPUT
+[08:33:23] Sent: 
+[08:33:23] Sent:     gpsLed = digitalio.DigitalInOut(board.GP22)
+[08:33:23] Sent:     gpsLed.direction = digitalio.Direction.OUTPUT
+[08:33:23] Sent: 
+[08:33:23] Sent:     transmitLed = digitalio.DigitalInOut(board.GP20)
+[08:33:23] Sent:     transmitLed.direction = digitalio.Direction.OUTPUT
+[08:33:23] Sent: 
+[08:33:23] Sent:     receiveLed = digitalio.DigitalInOut(board.GP18)
+[08:33:24] Sent:     receiveLed.direction = digitalio.Direction.OUTPUT
+[08:33:24] Sent: 
+[08:33:24] Sent:     errorLed = digitalio.DigitalInOut(board.GP19)
+[08:33:24] Sent:     errorLed.direction = digitalio.Direction.OUTPUT
+[08:33:24] Sent: 
+[08:33:24] Sent:     #Established LoRa Outputs
+[08:33:24] Sent:     M0 = digitalio.DigitalInOut(board.GP6)
+[08:33:24] Sent:     M0.direction = digitalio.Direction.OUTPUT
+[08:33:24] Sent:     M0.value = False
+[08:33:24] Sent: 
+[08:33:24] Sent:     M1 = digitalio.DigitalInOut(board.GP7)
+[08:33:24] Sent:     M1.direction = digitalio.Direction.OUTPUT
+[08:33:24] Sent:     M1.value = False
+[08:33:24] Sent: 
+[08:33:24] Sent:     #Defines sensors globally
+[08:33:24] Sent:     transceiver = None
+[08:33:24] Sent:     gps = None
+[08:33:24] Sent:     bme = None
+[08:33:24] Sent:     imu = None
+[08:33:24] Sent:     mag = None
+[08:33:24] Sent:     powerDraw = None
+[08:33:24] Sent:     solarOne = None
+[08:33:24] Sent:     solarTwo = None
+[08:33:24] Sent:     solarThree = None
+[08:33:24] Sent:     battery = None
+[08:33:24] Sent:     adc = None
+[08:33:24] Sent: 
+[08:33:24] Sent:     #Defines constants for sensor calibration
+[08:33:24] Sent:     temperature_offset = 0 #Each temperature sensor can be different, calibrate to a know temperature if possible
+[08:33:25] Sent:     vbus_reference_voltage = 5 #4.5V when powered by battery, 5V when powered by USB
+[08:33:25] Sent:     
+[08:33:25] Sent:     battery_detection_threshold = 2.5 #Determines when the battery is connected or not
+[08:33:25] Sent: 
+[08:33:25] Sent:     gpsStatus = False #Stores status of GPS connection for the GPS LED
+[08:33:25] Sent: 
+[08:33:25] Sent:     #Defines SD and storage card globally and sets dataNumber
+[08:33:25] Sent:     sdcard = None
+[08:33:25] Sent:     dataNumber = -1 #Line one in StateBackup.txt
+[08:33:25] Sent: 
+[08:33:25] Sent:     #Defines the sequence of beacon data globally
+[08:33:25] Sent:     beaconSequence = 0 #Line two in StateBackup.txt
+[08:33:25] Sent: 
+[08:33:25] Sent:     #Defines the errorNumber counter globally
+[08:33:25] Sent:     errorNumber = -1 #Line three in StateBackup.txt
+[08:33:25] Sent: 
+[08:33:25] Sent:     #Defines GPS object
+[08:33:25] Sent:     class GPS: 
+[08:33:25] Sent:         
+[08:33:25] Sent:         #GPS constructor
+[08:33:25] Sent:         def __init__(self, Latitude, Longitude, Altitude, Speed, Satellites, DOP):
+[08:33:25] Sent:             
+[08:33:25] Sent:             self.Latitude = Latitude
+[08:33:25] Sent:             self.Longitude = Longitude
+[08:33:25] Sent:             self.Altitude = Altitude
+[08:33:25] Sent:             self.Speed = Speed
+[08:33:25] Sent:             self.Satellites = Satellites
+[08:33:25] Sent:             self.DOP = DOP
+[08:33:25] Sent:         
+[08:33:26] Sent:         #Defines how GPS will be printed
+[08:33:26] Sent:         def __repr__(self):
+[08:33:26] Sent:             
+[08:33:26] Sent:             try:
+[08:33:26] Sent:             
+[08:33:26] Sent:                 return "<Lat: {:.6f} degrees, Long: {:.6f} degrees, Altitude: {:.2f} m, Speed: {:.2f} m/s, Satellites: {}, DOP: {}>".format(self.Latitude,
+[08:33:26] Sent:                                                                                                                                     self.Longitude,
+[08:33:26] Sent:                                                                                                                                     self.Altitude,
+[08:33:26] Sent:                                                                                                                                     self.Speed,
+[08:33:26] Sent:                                                                                                                                     self.Satellites,
+[08:33:27] Sent:                                                                                                                                     self.DOP)
+[08:33:27] Sent:             
+[08:33:27] Sent:             except:
+[08:33:27] Sent:                 
+[08:33:27] Sent:                 return "<Lat: {} degrees, Long: {} degrees, Altitude: {} m, Speed: {} m/s, Satellites: {}, DOP: {}>".format(self.Latitude,
+[08:33:27] Sent:                                                                                                                             self.Longitude,
+[08:33:27] Sent:                                                                                                                             self.Altitude,
+[08:33:27] Sent:                                                                                                                             self.Speed,
+[08:33:27] Sent:                                                                                                                             self.Satellites,
+[08:33:27] Sent:                                                                                                                             self.DOP)
+[08:33:27] Sent: 
+[08:33:27] Sent:     #Defines ALTIMETER object
+[08:33:27] Sent:     class ALTIMETER:
+[08:33:27] Sent:         
+[08:33:28] Sent:         #ALTIMETER constructor
+[08:33:28] Sent:         def __init__(self, Altitude, Temperature, Pressure, Humidity, Gas):
+[08:33:28] Sent:             
+[08:33:28] Sent:             self.Altitude = Altitude
+[08:33:28] Sent:             self.Temperature = Temperature
+[08:33:28] Sent:             self.Pressure = Pressure
+[08:33:28] Sent:             self.Humidity = Humidity
+[08:33:28] Sent:             self.Gas = Gas
+[08:33:28] Sent:         
+[08:33:28] Sent:         #Defines how ALTIMETER will be printed
+[08:33:28] Sent:         def __repr__(self):
+[08:33:28] Sent:             
+[08:33:28] Sent:             try:
+[08:33:28] Sent:                 
+[08:33:28] Sent:                 return "<Altitude: {:.2f} m, Temperature: {:.2f} C, Pressure: {:.2f} kPa, Humidity {:.2f} %, Gas: {:.0f} ohms>".format(self.Altitude,
+[08:33:28] Sent:                                                                                                                                        self.Temperature,
+[08:33:28] Sent:                                                                                                                                        self.Pressure,
+[08:33:29] Sent:                                                                                                                                        self.Humidity,
+[08:33:29] Sent:                                                                                                                                        self.Gas)
+[08:33:29] Sent:         
+[08:33:29] Sent:             except:
+[08:33:29] Sent:                 
+[08:33:29] Sent:                 return "<Altitude: {} m, Temperature: {} C, Pressure: {} kPa, Humidity {} %, Gas: {} ohms>".format(self.Altitude,
+[08:33:29] Sent:                                                                                                                    self.Temperature,
+[08:33:29] Sent:                                                                                                                    self.Pressure,
+[08:33:29] Sent:                                                                                                                    self.Humidity,
+[08:33:29] Sent:                                                                                                                    self.Gas)
+[08:33:29] Sent: 
+[08:33:29] Sent:     #Defines ACCELEROMETER object
+[08:33:30] Sent:     class ACCELEROMETER:
+[08:33:30] Sent:         
+[08:33:30] Sent:         #ACCELEROMETER constructor
+[08:33:30] Sent:         def __init__(self, X, Y, Z):
+[08:33:30] Sent:             
+[08:33:30] Sent:             self.X = X
+[08:33:30] Sent:             self.Y = Y
+[08:33:30] Sent:             self.Z = Z
+[08:33:30] Sent:         
+[08:33:30] Sent:         #Defines how ACCELEROMETER will be printed
+[08:33:30] Sent:         def __repr__(self):
+[08:33:30] Sent:             
+[08:33:30] Sent:             try:
+[08:33:30] Sent:             
+[08:33:30] Sent:                 return "<X-Axis Acceleration: {:.2f} m/s^2, Y-Axis Acceleration: {:.2f} m/s^2, Z-Axis Acceleration: {:.2f} m/s^2>".format(self.X,
+[08:33:30] Sent:                                                                                                                                           self.Y,
+[08:33:30] Sent:                                                                                                                                           self.Z)
+[08:33:30] Sent: 
+[08:33:30] Sent:             except:
+[08:33:30] Sent: 
+[08:33:30] Sent:                 return "<X-Axis Acceleration: {} m/s^2, Y-Axis Acceleration: {} m/s^2, Z-Axis Acceleration: {} m/s^2>".format(self.X,
+[08:33:31] Sent:                                                                                                                               self.Y,
+[08:33:31] Sent:                                                                                                                               self.Z)
+[08:33:31] Sent: 
+[08:33:31] Sent:     #Defines GYROSCOPE object
+[08:33:31] Sent:     class GYROSCOPE:
+[08:33:31] Sent:         
+[08:33:31] Sent:         #GYROSCOPE constructor
+[08:33:31] Sent:         def __init__(self, X, Y, Z):
+[08:33:31] Sent:             
+[08:33:31] Sent:             self.X = X
+[08:33:31] Sent:             self.Y = Y
+[08:33:31] Sent:             self.Z = Z
+
+---Welcome To The Groundstation---
+
+[08:41:19] Initialized Transciever
+[08:41:19] Initialized Threads
+[08:41:19] Attempting To Connect
+[08:41:19] Collected 1 Ports
+[08:41:19] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[08:41:19] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[08:41:19] Assigned Port: COM17
+
+[08:41:19] Started Threads
+[08:41:27] No Unique Data Recieved
+[08:41:27] Recieved: failed to setup imu failed to setup power 
+[08:41:31] No Unique Data Recieved
+[08:41:31] Recieved: failed to setup power 
+[08:41:32] No Unique Data Recieved
+[08:41:32] Recieved: cubesat initialized
+[08:42:05] No Unique Data Recieved
+[08:42:05] Recieved: failed to setup power 
+[08:42:07] No Unique Data Recieved
+[08:42:07] Recieved: cubesat initialized
+[08:42:16] No Unique Data Recieved
+[08:42:16] Recieved: failed to setup power 
+
+---Welcome To The Groundstation---
+
+[08:43:12] Initialized Transciever
+[08:43:12] Initialized Threads
+[08:43:12] Attempting To Connect
+[08:43:12] Collected 2 Ports
+[08:43:12] Checking Port: COM16 - USB Serial Device (COM16)
+[08:43:12] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[08:43:12] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[08:43:12] Assigned Port: COM17
+
+[08:43:12] Started Threads
+[08:43:54] Sent: ping
+[08:43:57] Recieved: pong
+[08:44:11] Sent: set dosend alt ture
+[08:44:13] Recieved: set target value to: false
+[08:44:20] Sent: set set dosend alt true
+[08:44:50] Sent: set dosend alt true
+[08:44:51] Recieved: set target value to: truealt 1547.15 20.88 840.71 30.85 2379.000000
+[08:44:55] Recieved Altimeter Packet
+[08:44:55] Recieved: 
+Altitude: 1547.05 m
+Temperature: 20.89 C
+Pressure: 840.72 Kpa
+Humidity 30.82 %
+Gas: 568.000000 Ohms
+[08:44:56] Recieved Altimeter Packet
+[08:44:56] Recieved: 
+Altitude: 1546.88 m
+Temperature: 20.91 C
+Pressure: 840.73 Kpa
+Humidity 30.78 %
+Gas: 568.000000 Ohms
+[08:44:59] Recieved Altimeter Packet
+[08:44:59] Recieved: 
+Altitude: 1546.84 m
+Temperature: 20.93 C
+Pressure: 840.74 Kpa
+Humidity 30.72 %
+Gas: 665.000000 Ohms
+[08:45:01] Recieved Altimeter Packet
+[08:45:01] Recieved: 
+Altitude: 1546.79 m
+Temperature: 20.95 C
+Pressure: 840.74 Kpa
+Humidity 30.67 %
+Gas: 877.000000 Ohms
+[08:45:04] Recieved Altimeter Packet
+[08:45:04] Recieved: 
+Altitude: 1546.77 m
+Temperature: 20.97 C
+Pressure: 840.75 Kpa
+Humidity 30.60 %
+Gas: 1115.000000 Ohms
+[08:45:06] Recieved Altimeter Packet
+[08:45:06] Recieved: 
+Altitude: 1546.69 m
+Temperature: 20.99 C
+Pressure: 840.75 Kpa
+Humidity 30.55 %
+Gas: 1381.000000 Ohms
+[08:45:09] Recieved Altimeter Packet
+[08:45:09] Recieved: 
+Altitude: 1546.61 m
+Temperature: 21.01 C
+Pressure: 840.76 Kpa
+Humidity 30.48 %
+Gas: 1620.000000 Ohms
+[08:45:10] Recieved Altimeter Packet
+[08:45:10] Recieved: 
+Altitude: 1546.65 m
+Temperature: 21.02 C
+Pressure: 840.76 Kpa
+Humidity 30.46 %
+Gas: 1851.000000 Ohms
+[08:45:13] Recieved Altimeter Packet
+[08:45:13] Recieved: 
+Altitude: 1546.68 m
+Temperature: 21.04 C
+Pressure: 840.76 Kpa
+Humidity 30.41 %
+Gas: 2072.000000 Ohms
+[08:45:15] Recieved Altimeter Packet
+[08:45:15] Recieved: 
+Altitude: 1546.62 m
+Temperature: 21.05 C
+Pressure: 840.76 Kpa
+Humidity 30.37 %
+Gas: 2280.000000 Ohms
+[08:45:18] Recieved Altimeter Packet
+[08:45:18] Recieved: 
+Altitude: 1546.66 m
+Temperature: 21.07 C
+Pressure: 840.76 Kpa
+Humidity 30.33 %
+Gas: 2528.000000 Ohms
+[08:45:20] Recieved Altimeter Packet
+[08:45:20] Recieved: 
+Altitude: 1546.60 m
+Temperature: 21.08 C
+Pressure: 840.76 Kpa
+Humidity 30.28 %
+Gas: 2718.000000 Ohms
+[08:45:23] Recieved Altimeter Packet
+[08:45:23] Recieved: 
+Altitude: 1546.63 m
+Temperature: 21.10 C
+Pressure: 840.76 Kpa
+Humidity 30.24 %
+Gas: 2905.000000 Ohms
+[08:45:24] Recieved Altimeter Packet
+[08:45:24] Recieved: 
+Altitude: 1546.59 m
+Temperature: 21.11 C
+Pressure: 840.77 Kpa
+Humidity 30.21 %
+Gas: 3084.000000 Ohms
+[08:45:27] Recieved Altimeter Packet
+[08:45:27] Recieved: 
+Altitude: 1546.51 m
+Temperature: 21.13 C
+Pressure: 840.77 Kpa
+Humidity 30.20 %
+Gas: 3256.000000 Ohms
+[08:45:29] Recieved Altimeter Packet
+[08:45:29] Recieved: 
+Altitude: 1546.48 m
+Temperature: 21.15 C
+Pressure: 840.78 Kpa
+Humidity 30.17 %
+Gas: 3428.000000 Ohms
+
+---Welcome To The Groundstation---
+
+[08:51:23] Initialized Transciever
+[08:51:23] Initialized Threads
+[08:51:23] Attempting To Connect
+[08:51:23] Collected 2 Ports
+[08:51:23] Checking Port: COM16 - USB Serial Device (COM16)
+[08:51:23] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[08:51:23] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[08:51:23] Assigned Port: COM17
+
+[08:51:23] Started Threads
+[08:51:28] Sent: ping
+[08:51:30] Recieved: pong
+[08:51:39] Sent: set dosend alt true
+[08:51:43] Recieved: set target value to: truealt 1545.65 21.37 840.86 30.43 5780.000000
+[08:51:46] Recieved Altimeter Packet
+[08:51:46] Recieved: 
+Altitude: 1545.75 m
+Temperature: 21.38 C
+Pressure: 840.85 Kpa
+Humidity 30.43 %
+Gas: 959.000000 Ohms
+[08:51:47] Recieved Altimeter Packet
+[08:51:47] Recieved: 
+Altitude: 1545.68 m
+Temperature: 21.40 C
+Pressure: 840.86 Kpa
+Humidity 30.36 %
+Gas: 1464.000000 Ohms
+[08:51:50] Recieved Altimeter Packet
+[08:51:50] Recieved: 
+Altitude: 1545.68 m
+Temperature: 21.42 C
+Pressure: 840.86 Kpa
+Humidity 30.30 %
+Gas: 1923.000000 Ohms
+[08:51:52] Recieved Altimeter Packet
+[08:51:52] Recieved: 
+Altitude: 1545.69 m
+Temperature: 21.44 C
+Pressure: 840.86 Kpa
+Humidity 30.23 %
+Gas: 2377.000000 Ohms
+[08:51:55] Recieved Altimeter Packet
+[08:51:55] Recieved: 
+Altitude: 1545.70 m
+Temperature: 21.46 C
+Pressure: 840.86 Kpa
+Humidity 30.18 %
+Gas: 2736.000000 Ohms
+[08:51:57] Recieved Altimeter Packet
+[08:51:57] Recieved: 
+Altitude: 1545.77 m
+Temperature: 21.48 C
+Pressure: 840.85 Kpa
+Humidity 30.14 %
+Gas: 3040.000000 Ohms
+[08:52:00] Recieved Altimeter Packet
+[08:52:00] Recieved: 
+Altitude: 1545.86 m
+Temperature: 21.49 C
+Pressure: 840.84 Kpa
+Humidity 30.10 %
+Gas: 3327.000000 Ohms
+[08:52:01] Recieved Altimeter Packet
+[08:52:01] Recieved: 
+Altitude: 1545.83 m
+Temperature: 21.51 C
+Pressure: 840.84 Kpa
+Humidity 30.06 %
+Gas: 3584.000000 Ohms
+[08:52:04] Recieved Altimeter Packet
+[08:52:04] Recieved: 
+Altitude: 1545.86 m
+Temperature: 21.53 C
+Pressure: 840.84 Kpa
+Humidity 30.04 %
+Gas: 3808.000000 Ohms
+[08:52:06] Recieved Altimeter Packet
+[08:52:06] Recieved: 
+Altitude: 1545.92 m
+Temperature: 21.55 C
+Pressure: 840.83 Kpa
+Humidity 30.01 %
+Gas: 4042.000000 Ohms
+[08:52:09] Recieved Altimeter Packet
+[08:52:09] Recieved: 
+Altitude: 1545.96 m
+Temperature: 21.57 C
+Pressure: 840.83 Kpa
+Humidity 29.96 %
+Gas: 4231.000000 Ohms
+[08:52:11] Recieved Altimeter Packet
+[08:52:11] Recieved: 
+Altitude: 1545.85 m
+Temperature: 21.58 C
+Pressure: 840.84 Kpa
+Humidity 29.94 %
+Gas: 4397.000000 Ohms
+[08:52:14] Recieved Altimeter Packet
+[08:52:14] Recieved: 
+Altitude: 1545.88 m
+Temperature: 21.60 C
+Pressure: 840.84 Kpa
+Humidity 29.90 %
+Gas: 4576.000000 Ohms
+[08:52:15] Recieved Altimeter Packet
+[08:52:15] Recieved: 
+Altitude: 1545.94 m
+Temperature: 21.62 C
+Pressure: 840.83 Kpa
+Humidity 29.87 %
+Gas: 4820.000000 Ohms
+[08:52:18] Recieved Altimeter Packet
+[08:52:18] Recieved: 
+Altitude: 1545.95 m
+Temperature: 21.64 C
+Pressure: 840.83 Kpa
+Humidity 29.83 %
+Gas: 4951.000000 Ohms
+[08:52:20] Recieved Altimeter Packet
+[08:52:20] Recieved: 
+Altitude: 1545.90 m
+Temperature: 21.66 C
+Pressure: 840.84 Kpa
+Humidity 29.80 %
+Gas: 5090.000000 Ohms
+[08:52:23] Recieved Altimeter Packet
+[08:52:23] Recieved: 
+Altitude: 1545.88 m
+Temperature: 21.67 C
+Pressure: 840.84 Kpa
+Humidity 29.77 %
+Gas: 5227.000000 Ohms
+[08:52:25] Recieved Altimeter Packet
+[08:52:25] Recieved: 
+Altitude: 1545.95 m
+Temperature: 21.69 C
+Pressure: 840.83 Kpa
+Humidity 29.75 %
+Gas: 5345.000000 Ohms
+[08:52:28] Recieved Altimeter Packet
+[08:52:28] Recieved: 
+Altitude: 1545.92 m
+Temperature: 21.70 C
+Pressure: 840.83 Kpa
+Humidity 29.72 %
+Gas: 5468.000000 Ohms
+[08:52:29] Recieved Altimeter Packet
+[08:52:29] Recieved: 
+Altitude: 1545.91 m
+Temperature: 21.72 C
+Pressure: 840.84 Kpa
+Humidity 29.70 %
+Gas: 5557.000000 Ohms
+[08:52:32] Recieved Altimeter Packet
+[08:52:32] Recieved: 
+Altitude: 1545.89 m
+Temperature: 21.74 C
+Pressure: 840.84 Kpa
+Humidity 29.70 %
+Gas: 5676.000000 Ohms
+[08:52:34] Recieved Altimeter Packet
+[08:52:34] Recieved: 
+Altitude: 1545.92 m
+Temperature: 21.75 C
+Pressure: 840.83 Kpa
+Humidity 29.68 %
+Gas: 5776.000000 Ohms
+[08:52:37] Recieved Altimeter Packet
+[08:52:37] Recieved: 
+Altitude: 1545.92 m
+Temperature: 21.77 C
+Pressure: 840.83 Kpa
+Humidity 29.66 %
+Gas: 5831.000000 Ohms
+[08:52:39] Recieved Altimeter Packet
+[08:52:39] Recieved: 
+Altitude: 1545.90 m
+Temperature: 21.79 C
+Pressure: 840.84 Kpa
+Humidity 29.66 %
+Gas: 5949.000000 Ohms
+[08:52:42] Recieved Altimeter Packet
+[08:52:42] Recieved: 
+Altitude: 1545.86 m
+Temperature: 21.81 C
+Pressure: 840.84 Kpa
+Humidity 29.63 %
+Gas: 6033.000000 Ohms
+[08:52:44] Recieved Altimeter Packet
+[08:52:44] Recieved: 
+Altitude: 1545.79 m
+Temperature: 21.83 C
+Pressure: 840.85 Kpa
+Humidity 29.59 %
+Gas: 6111.000000 Ohms
+[08:52:47] Recieved Altimeter Packet
+[08:52:47] Recieved: 
+Altitude: 1545.85 m
+Temperature: 21.85 C
+Pressure: 840.84 Kpa
+Humidity 29.56 %
+Gas: 6191.000000 Ohms
+[08:52:48] Recieved Altimeter Packet
+[08:52:48] Recieved: 
+Altitude: 1545.85 m
+Temperature: 21.86 C
+Pressure: 840.84 Kpa
+Humidity 29.54 %
+Gas: 6254.000000 Ohms
+[08:52:51] Recieved Altimeter Packet
+[08:52:51] Recieved: 
+Altitude: 1545.84 m
+Temperature: 21.88 C
+Pressure: 840.84 Kpa
+Humidity 29.51 %
+Gas: 6328.000000 Ohms
+[08:52:53] Recieved Altimeter Packet
+[08:52:53] Recieved: 
+Altitude: 1545.80 m
+Temperature: 21.90 C
+Pressure: 840.85 Kpa
+Humidity 29.52 %
+Gas: 6385.000000 Ohms
+[08:52:56] Recieved Altimeter Packet
+[08:52:56] Recieved: 
+Altitude: 1545.77 m
+Temperature: 21.91 C
+Pressure: 840.85 Kpa
+Humidity 29.51 %
+Gas: 6463.000000 Ohms
+[08:52:58] Recieved Altimeter Packet
+[08:52:58] Recieved: 
+Altitude: 1545.67 m
+Temperature: 21.93 C
+Pressure: 840.86 Kpa
+Humidity 29.47 %
+Gas: 6522.000000 Ohms
+[08:53:01] Recieved Altimeter Packet
+[08:53:01] Recieved: 
+Altitude: 1545.71 m
+Temperature: 21.95 C
+Pressure: 840.86 Kpa
+Humidity 29.44 %
+Gas: 6552.000000 Ohms
+[08:53:02] Recieved Altimeter Packet
+[08:53:02] Recieved: 
+Altitude: 1545.73 m
+Temperature: 21.97 C
+Pressure: 840.85 Kpa
+Humidity 29.42 %
+Gas: 6618.000000 Ohms
+[08:53:05] Recieved Altimeter Packet
+[08:53:05] Recieved: 
+Altitude: 1545.74 m
+Temperature: 21.98 C
+Pressure: 840.85 Kpa
+Humidity 29.39 %
+Gas: 6664.000000 Ohms
+[08:53:07] Recieved Altimeter Packet
+[08:53:07] Recieved: 
+Altitude: 1545.73 m
+Temperature: 22.00 C
+Pressure: 840.85 Kpa
+Humidity 29.36 %
+Gas: 6722.000000 Ohms
+[08:53:10] Recieved Altimeter Packet
+[08:53:10] Recieved: 
+Altitude: 1545.80 m
+Temperature: 22.02 C
+Pressure: 840.85 Kpa
+Humidity 29.34 %
+Gas: 6754.000000 Ohms
+[08:53:12] Recieved Altimeter Packet
+[08:53:12] Recieved: 
+Altitude: 1545.88 m
+Temperature: 22.04 C
+Pressure: 840.84 Kpa
+Humidity 29.31 %
+Gas: 6808.000000 Ohms
+[08:53:15] Recieved Altimeter Packet
+[08:53:15] Recieved: 
+Altitude: 1545.95 m
+Temperature: 22.07 C
+Pressure: 840.83 Kpa
+Humidity 29.28 %
+Gas: 6890.000000 Ohms
+[08:53:16] Recieved Altimeter Packet
+[08:53:16] Recieved: 
+Altitude: 1546.00 m
+Temperature: 22.09 C
+Pressure: 840.83 Kpa
+Humidity 29.26 %
+Gas: 6879.000000 Ohms
+[08:53:19] Recieved Altimeter Packet
+[08:53:19] Recieved: 
+Altitude: 1546.05 m
+Temperature: 22.11 C
+Pressure: 840.82 Kpa
+Humidity 29.23 %
+Gas: 6935.000000 Ohms
+[08:53:21] Recieved Altimeter Packet
+[08:53:21] Recieved: 
+Altitude: 1546.04 m
+Temperature: 22.14 C
+Pressure: 840.82 Kpa
+Humidity 29.20 %
+Gas: 6969.000000 Ohms
+[08:53:24] Recieved Altimeter Packet
+[08:53:24] Recieved: 
+Altitude: 1546.04 m
+Temperature: 22.15 C
+Pressure: 840.82 Kpa
+Humidity 29.17 %
+Gas: 7015.000000 Ohms
+[08:53:26] Recieved Altimeter Packet
+[08:53:26] Recieved: 
+Altitude: 1546.05 m
+Temperature: 22.17 C
+Pressure: 840.82 Kpa
+Humidity 29.15 %
+Gas: 7038.000000 Ohms
+[08:53:29] Recieved Altimeter Packet
+[08:53:29] Recieved: 
+Altitude: 1546.00 m
+Temperature: 22.19 C
+Pressure: 840.83 Kpa
+Humidity 29.12 %
+Gas: 7079.000000 Ohms
+[08:53:31] Recieved Altimeter Packet
+[08:53:31] Recieved: 
+Altitude: 1546.08 m
+Temperature: 22.21 C
+Pressure: 840.82 Kpa
+Humidity 29.10 %
+Gas: 7091.000000 Ohms
+[08:53:34] Recieved Altimeter Packet
+[08:53:34] Recieved: 
+Altitude: 1546.10 m
+Temperature: 22.23 C
+Pressure: 840.82 Kpa
+Humidity 29.07 %
+Gas: 7150.000000 Ohms
+[08:53:35] Recieved Altimeter Packet
+[08:53:35] Recieved: 
+Altitude: 1546.09 m
+Temperature: 22.25 C
+Pressure: 840.82 Kpa
+Humidity 29.05 %
+Gas: 7186.000000 Ohms
+[08:53:38] Recieved Altimeter Packet
+[08:53:38] Recieved: 
+Altitude: 1546.09 m
+Temperature: 22.26 C
+Pressure: 840.82 Kpa
+Humidity 29.02 %
+Gas: 7229.000000 Ohms
+[08:53:40] Recieved Altimeter Packet
+[08:53:40] Recieved: 
+Altitude: 1546.05 m
+Temperature: 22.28 C
+Pressure: 840.82 Kpa
+Humidity 29.00 %
+Gas: 7248.000000 Ohms
+[08:53:43] Recieved Altimeter Packet
+[08:53:43] Recieved: 
+Altitude: 1546.09 m
+Temperature: 22.30 C
+Pressure: 840.82 Kpa
+Humidity 28.98 %
+Gas: 7241.000000 Ohms
+[08:53:45] Recieved Altimeter Packet
+[08:53:45] Recieved: 
+Altitude: 1546.13 m
+Temperature: 22.32 C
+Pressure: 840.81 Kpa
+Humidity 28.96 %
+Gas: 7266.000000 Ohms
+[08:53:48] Recieved Altimeter Packet
+[08:53:48] Recieved: 
+Altitude: 1546.11 m
+Temperature: 22.33 C
+Pressure: 840.81 Kpa
+Humidity 28.94 %
+Gas: 7341.000000 Ohms
+[08:53:49] Recieved Altimeter Packet
+[08:53:49] Recieved: 
+Altitude: 1546.20 m
+Temperature: 22.35 C
+Pressure: 840.81 Kpa
+Humidity 28.93 %
+Gas: 7335.000000 Ohms
+[08:53:52] Recieved Altimeter Packet
+[08:53:52] Recieved: 
+Altitude: 1546.22 m
+Temperature: 22.37 C
+Pressure: 840.80 Kpa
+Humidity 28.91 %
+Gas: 7379.000000 Ohms
+[08:53:54] Recieved Altimeter Packet
+[08:53:54] Recieved: 
+Altitude: 1546.18 m
+Temperature: 22.38 C
+Pressure: 840.81 Kpa
+Humidity 28.89 %
+Gas: 7405.000000 Ohms
+[08:53:57] Recieved Altimeter Packet
+[08:53:57] Recieved: 
+Altitude: 1546.21 m
+Temperature: 22.40 C
+Pressure: 840.81 Kpa
+Humidity 28.86 %
+Gas: 7379.000000 Ohms
+[08:53:59] Recieved Altimeter Packet
+[08:53:59] Recieved: 
+Altitude: 1546.17 m
+Temperature: 22.42 C
+Pressure: 840.81 Kpa
+Humidity 28.81 %
+Gas: 7463.000000 Ohms
+[08:54:02] Recieved Altimeter Packet
+[08:54:02] Recieved: 
+Altitude: 1546.22 m
+Temperature: 22.43 C
+Pressure: 840.80 Kpa
+Humidity 28.80 %
+Gas: 7450.000000 Ohms
+[08:54:03] Recieved Altimeter Packet
+[08:54:03] Recieved: 
+Altitude: 1546.27 m
+Temperature: 22.45 C
+Pressure: 840.80 Kpa
+Humidity 28.77 %
+Gas: 7444.000000 Ohms
+[08:54:07] Recieved Altimeter Packet
+[08:54:07] Recieved: 
+Altitude: 1546.28 m
+Temperature: 22.47 C
+Pressure: 840.80 Kpa
+Humidity 28.76 %
+Gas: 7542.000000 Ohms
+[08:54:08] Recieved Altimeter Packet
+[08:54:08] Recieved: 
+Altitude: 1546.24 m
+Temperature: 22.48 C
+Pressure: 840.80 Kpa
+Humidity 28.73 %
+Gas: 7522.000000 Ohms
+[08:54:11] Recieved Altimeter Packet
+[08:54:11] Recieved: 
+Altitude: 1546.30 m
+Temperature: 22.50 C
+Pressure: 840.79 Kpa
+Humidity 28.71 %
+Gas: 7556.000000 Ohms
+[08:54:13] Recieved Altimeter Packet
+[08:54:13] Recieved: 
+Altitude: 1546.30 m
+Temperature: 22.52 C
+Pressure: 840.79 Kpa
+Humidity 28.68 %
+Gas: 7562.000000 Ohms
+[08:54:16] Recieved Altimeter Packet
+[08:54:16] Recieved: 
+Altitude: 1546.32 m
+Temperature: 22.54 C
+Pressure: 840.79 Kpa
+Humidity 28.66 %
+Gas: 7589.000000 Ohms
+[08:54:18] Recieved Altimeter Packet
+[08:54:18] Recieved: 
+Altitude: 1546.32 m
+Temperature: 22.57 C
+Pressure: 840.79 Kpa
+Humidity 28.64 %
+Gas: 7562.000000 Ohms
+[08:54:21] Recieved Altimeter Packet
+[08:54:21] Recieved: 
+Altitude: 1546.30 m
+Temperature: 22.59 C
+Pressure: 840.80 Kpa
+Humidity 28.62 %
+Gas: 7603.000000 Ohms
+[08:54:22] Recieved Altimeter Packet
+[08:54:22] Recieved: 
+Altitude: 1546.34 m
+Temperature: 22.61 C
+Pressure: 840.79 Kpa
+Humidity 28.61 %
+Gas: 7644.000000 Ohms
+[08:54:25] Recieved Altimeter Packet
+[08:54:25] Recieved: 
+Altitude: 1546.34 m
+Temperature: 22.63 C
+Pressure: 840.79 Kpa
+Humidity 28.58 %
+Gas: 7671.000000 Ohms
+[08:54:27] Recieved Altimeter Packet
+[08:54:27] Recieved: 
+Altitude: 1546.33 m
+Temperature: 22.65 C
+Pressure: 840.79 Kpa
+Humidity 28.54 %
+Gas: 7671.000000 Ohms
+[08:54:30] Recieved Altimeter Packet
+[08:54:30] Recieved: 
+Altitude: 1546.34 m
+Temperature: 22.67 C
+Pressure: 840.79 Kpa
+Humidity 28.52 %
+Gas: 7657.000000 Ohms
+[08:54:32] Recieved Altimeter Packet
+[08:54:32] Recieved: 
+Altitude: 1546.41 m
+Temperature: 22.68 C
+Pressure: 840.78 Kpa
+Humidity 28.52 %
+Gas: 7699.000000 Ohms
+[08:54:35] Recieved Altimeter Packet
+[08:54:35] Recieved: 
+Altitude: 1546.35 m
+Temperature: 22.70 C
+Pressure: 840.79 Kpa
+Humidity 28.50 %
+Gas: 7692.000000 Ohms
+[08:54:36] Recieved Altimeter Packet
+[08:54:36] Recieved: 
+Altitude: 1546.43 m
+Temperature: 22.72 C
+Pressure: 840.78 Kpa
+Humidity 28.46 %
+Gas: 7734.000000 Ohms
+[08:54:39] Recieved Altimeter Packet
+[08:54:40] Recieved: 
+Altitude: 1546.38 m
+Temperature: 22.73 C
+Pressure: 840.79 Kpa
+Humidity 28.46 %
+Gas: 7755.000000 Ohms
+[08:54:41] Recieved Altimeter Packet
+[08:54:41] Recieved: 
+Altitude: 1546.42 m
+Temperature: 22.75 C
+Pressure: 840.78 Kpa
+Humidity 28.42 %
+Gas: 7762.000000 Ohms
+[08:54:44] Recieved Altimeter Packet
+[08:54:44] Recieved: 
+Altitude: 1546.49 m
+Temperature: 22.76 C
+Pressure: 840.78 Kpa
+Humidity 28.40 %
+Gas: 7783.000000 Ohms
+[08:54:46] Recieved Altimeter Packet
+[08:54:46] Recieved: 
+Altitude: 1546.50 m
+Temperature: 22.78 C
+Pressure: 840.77 Kpa
+Humidity 28.38 %
+Gas: 7769.000000 Ohms
+[08:54:49] Recieved Altimeter Packet
+[08:54:49] Recieved: 
+Altitude: 1546.54 m
+Temperature: 22.79 C
+Pressure: 840.77 Kpa
+Humidity 28.36 %
+Gas: 7833.000000 Ohms
+[08:54:50] Recieved Altimeter Packet
+[08:54:50] Recieved: 
+Altitude: 1546.50 m
+Temperature: 22.81 C
+Pressure: 840.77 Kpa
+Humidity 28.36 %
+Gas: 7833.000000 Ohms
+[08:54:54] Recieved Altimeter Packet
+[08:54:54] Recieved: 
+Altitude: 1546.54 m
+Temperature: 22.82 C
+Pressure: 840.77 Kpa
+Humidity 28.34 %
+Gas: 7812.000000 Ohms
+[08:54:55] Recieved Altimeter Packet
+[08:54:55] Recieved: 
+Altitude: 1546.61 m
+Temperature: 22.83 C
+Pressure: 840.76 Kpa
+Humidity 28.31 %
+Gas: 7869.000000 Ohms
+[08:54:58] Recieved Altimeter Packet
+[08:54:58] Recieved: 
+Altitude: 1546.55 m
+Temperature: 22.84 C
+Pressure: 840.77 Kpa
+Humidity 28.30 %
+Gas: 7876.000000 Ohms
+[08:55:00] Recieved Altimeter Packet
+[08:55:00] Recieved: 
+Altitude: 1546.42 m
+Temperature: 22.85 C
+Pressure: 840.78 Kpa
+Humidity 28.28 %
+Gas: 7862.000000 Ohms
+[08:55:03] Recieved Altimeter Packet
+[08:55:03] Recieved: 
+Altitude: 1546.48 m
+Temperature: 22.86 C
+Pressure: 840.78 Kpa
+Humidity 28.26 %
+Gas: 7928.000000 Ohms
+[08:55:05] Recieved Altimeter Packet
+[08:55:05] Recieved: 
+Altitude: 1546.54 m
+Temperature: 22.87 C
+Pressure: 840.77 Kpa
+Humidity 28.26 %
+Gas: 7862.000000 Ohms
+[08:55:08] Recieved Altimeter Packet
+[08:55:08] Recieved: 
+Altitude: 1546.58 m
+Temperature: 22.87 C
+Pressure: 840.77 Kpa
+Humidity 28.25 %
+Gas: 7920.000000 Ohms
+[08:55:09] Recieved Altimeter Packet
+[08:55:09] Recieved: 
+Altitude: 1546.58 m
+Temperature: 22.88 C
+Pressure: 840.77 Kpa
+Humidity 28.25 %
+Gas: 7935.000000 Ohms
+[08:55:12] Recieved Altimeter Packet
+[08:55:12] Recieved: 
+Altitude: 1546.67 m
+Temperature: 22.88 C
+Pressure: 840.76 Kpa
+Humidity 28.24 %
+Gas: 7920.000000 Ohms
+[08:55:14] Recieved Altimeter Packet
+[08:55:14] Recieved: 
+Altitude: 1546.73 m
+Temperature: 22.89 C
+Pressure: 840.75 Kpa
+Humidity 28.24 %
+Gas: 7876.000000 Ohms
+[08:55:17] Recieved Altimeter Packet
+[08:55:17] Recieved: 
+Altitude: 1546.74 m
+Temperature: 22.89 C
+Pressure: 840.75 Kpa
+Humidity 28.23 %
+Gas: 7942.000000 Ohms
+[08:55:19] Recieved Altimeter Packet
+[08:55:19] Recieved: 
+Altitude: 1546.80 m
+Temperature: 22.90 C
+Pressure: 840.74 Kpa
+Humidity 28.22 %
+Gas: 7942.000000 Ohms
+[08:55:22] Recieved Altimeter Packet
+[08:55:22] Recieved: 
+Altitude: 1546.77 m
+Temperature: 22.90 C
+Pressure: 840.75 Kpa
+Humidity 28.21 %
+Gas: 7980.000000 Ohms
+
+---Welcome To The Groundstation---
+
+[11:04:38] Initialized Transciever
+[11:04:38] Initialized Threads
+[11:04:38] Attempting To Connect
+[11:04:38] Collected 1 Ports
+[11:04:38] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[11:04:38] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[11:04:38] Assigned Port: COM17
+
+[11:04:38] Started Threads
+[11:05:12] Recieved: cubesat initialized
+[11:05:15] Sent: ping
+[11:05:18] Recieved: pong
+[11:05:25] Sent: set dosend alt true
+[11:05:27] Recieved: set target value to: truealt 1566.06 22.34 838.76 36.85 3038.000000
+[11:05:30] Recieved Altimeter Packet
+[11:05:30] Recieved: 
+Altitude: 1566.02 m
+Temperature: 22.35 C
+Pressure: 838.76 Kpa
+Humidity 36.69 %
+Gas: 568.000000 Ohms
+[11:05:31] Recieved Altimeter Packet
+[11:05:31] Recieved: 
+Altitude: 1565.94 m
+Temperature: 22.37 C
+Pressure: 838.77 Kpa
+Humidity 36.49 %
+Gas: 785.000000 Ohms
+[11:05:34] Recieved Altimeter Packet
+[11:05:34] Recieved: 
+Altitude: 1565.85 m
+Temperature: 22.39 C
+Pressure: 838.78 Kpa
+Humidity 36.24 %
+Gas: 1067.000000 Ohms
+[11:05:36] Recieved Altimeter Packet
+[11:05:36] Recieved: 
+Altitude: 1565.83 m
+Temperature: 22.41 C
+Pressure: 838.78 Kpa
+Humidity 36.05 %
+Gas: 1413.000000 Ohms
+[11:05:39] Recieved Altimeter Packet
+[11:05:39] Recieved: 
+Altitude: 1565.71 m
+Temperature: 22.44 C
+Pressure: 838.79 Kpa
+Humidity 35.88 %
+Gas: 1742.000000 Ohms
+[11:05:41] Recieved Altimeter Packet
+[11:05:41] Recieved: 
+Altitude: 1565.62 m
+Temperature: 22.46 C
+Pressure: 838.80 Kpa
+Humidity 35.73 %
+Gas: 2038.000000 Ohms
+[11:05:44] Recieved Altimeter Packet
+[11:05:44] Recieved: 
+Altitude: 1565.60 m
+Temperature: 22.47 C
+Pressure: 838.80 Kpa
+Humidity 35.61 %
+Gas: 2364.000000 Ohms
+[11:05:45] Recieved Altimeter Packet
+[11:05:45] Recieved: 
+Altitude: 1565.62 m
+Temperature: 22.49 C
+Pressure: 838.80 Kpa
+Humidity 35.53 %
+Gas: 2625.000000 Ohms
+[11:05:48] Recieved Altimeter Packet
+[11:05:48] Recieved: 
+Altitude: 1565.68 m
+Temperature: 22.51 C
+Pressure: 838.80 Kpa
+Humidity 35.48 %
+Gas: 2882.000000 Ohms
+[11:05:50] Recieved Altimeter Packet
+[11:05:50] Recieved: 
+Altitude: 1565.68 m
+Temperature: 22.52 C
+Pressure: 838.79 Kpa
+Humidity 35.43 %
+Gas: 3100.000000 Ohms
+[11:05:53] Recieved Altimeter Packet
+[11:05:53] Recieved: 
+Altitude: 1565.61 m
+Temperature: 22.54 C
+Pressure: 838.80 Kpa
+Humidity 35.38 %
+Gas: 3298.000000 Ohms
+[11:05:55] Recieved Altimeter Packet
+[11:05:55] Recieved: 
+Altitude: 1565.60 m
+Temperature: 22.55 C
+Pressure: 838.80 Kpa
+Humidity 35.35 %
+Gas: 3504.000000 Ohms
+[11:05:58] Recieved Altimeter Packet
+[11:05:58] Recieved: 
+Altitude: 1565.46 m
+Temperature: 22.56 C
+Pressure: 838.82 Kpa
+Humidity 35.34 %
+Gas: 3664.000000 Ohms
+[11:05:59] Recieved Altimeter Packet
+[11:05:59] Recieved: 
+Altitude: 1565.44 m
+Temperature: 22.58 C
+Pressure: 838.82 Kpa
+Humidity 35.35 %
+Gas: 3842.000000 Ohms
+[11:06:02] Recieved Altimeter Packet
+[11:06:02] Recieved: 
+Altitude: 1565.47 m
+Temperature: 22.59 C
+Pressure: 838.82 Kpa
+Humidity 35.42 %
+Gas: 4012.000000 Ohms
+[11:06:04] Recieved Altimeter Packet
+[11:06:04] Recieved: 
+Altitude: 1565.50 m
+Temperature: 22.61 C
+Pressure: 838.81 Kpa
+Humidity 35.55 %
+Gas: 4125.000000 Ohms
+[11:06:07] Recieved Altimeter Packet
+[11:06:07] Recieved: 
+Altitude: 1565.56 m
+Temperature: 22.63 C
+Pressure: 838.81 Kpa
+Humidity 35.62 %
+Gas: 4282.000000 Ohms
+[11:06:09] Recieved Altimeter Packet
+[11:06:09] Recieved: 
+Altitude: 1565.58 m
+Temperature: 22.64 C
+Pressure: 838.81 Kpa
+Humidity 35.60 %
+Gas: 4419.000000 Ohms
+[11:06:12] Recieved Altimeter Packet
+[11:06:12] Recieved: 
+Altitude: 1565.58 m
+Temperature: 22.66 C
+Pressure: 838.81 Kpa
+Humidity 35.53 %
+Gas: 4542.000000 Ohms
+[11:06:14] Recieved Altimeter Packet
+[11:06:14] Recieved: 
+Altitude: 1565.63 m
+Temperature: 22.67 C
+Pressure: 838.80 Kpa
+Humidity 35.40 %
+Gas: 4681.000000 Ohms
+[11:06:17] Recieved Altimeter Packet
+[11:06:17] Recieved: 
+Altitude: 1565.64 m
+Temperature: 22.68 C
+Pressure: 838.80 Kpa
+Humidity 35.29 %
+Gas: 4880.000000 Ohms
+[11:06:18] Recieved Altimeter Packet
+[11:06:18] Recieved: 
+Altitude: 1565.63 m
+Temperature: 22.70 C
+Pressure: 838.80 Kpa
+Humidity 35.20 %
+Gas: 5024.000000 Ohms
+[11:06:21] Recieved Altimeter Packet
+[11:06:21] Recieved: 
+Altitude: 1565.66 m
+Temperature: 22.72 C
+Pressure: 838.80 Kpa
+Humidity 35.12 %
+Gas: 5093.000000 Ohms
+[11:06:23] Recieved Altimeter Packet
+[11:06:23] Recieved: 
+Altitude: 1565.63 m
+Temperature: 22.74 C
+Pressure: 838.80 Kpa
+Humidity 35.14 %
+Gas: 5164.000000 Ohms
+[11:06:26] Recieved Altimeter Packet
+[11:06:26] Recieved: 
+Altitude: 1565.67 m
+Temperature: 22.75 C
+Pressure: 838.80 Kpa
+Humidity 35.22 %
+Gas: 5282.000000 Ohms
+[11:06:28] Recieved Altimeter Packet
+[11:06:28] Recieved: 
+Altitude: 1565.68 m
+Temperature: 22.77 C
+Pressure: 838.79 Kpa
+Humidity 35.20 %
+Gas: 5359.000000 Ohms
+[11:06:31] Recieved Altimeter Packet
+[11:06:31] Recieved: 
+Altitude: 1565.66 m
+Temperature: 22.79 C
+Pressure: 838.80 Kpa
+Humidity 35.13 %
+Gas: 5447.000000 Ohms
+[11:06:32] Recieved Altimeter Packet
+[11:06:32] Recieved: 
+Altitude: 1565.63 m
+Temperature: 22.80 C
+Pressure: 838.80 Kpa
+Humidity 35.06 %
+Gas: 5532.000000 Ohms
+[11:06:35] Recieved Altimeter Packet
+[11:06:35] Recieved: 
+Altitude: 1565.59 m
+Temperature: 22.82 C
+Pressure: 838.80 Kpa
+Humidity 34.99 %
+Gas: 5598.000000 Ohms
+[11:06:37] Recieved Altimeter Packet
+[11:06:37] Recieved: 
+Altitude: 1565.60 m
+Temperature: 22.83 C
+Pressure: 838.80 Kpa
+Humidity 35.03 %
+Gas: 5649.000000 Ohms
+[11:06:40] Recieved Altimeter Packet
+[11:06:40] Recieved: 
+Altitude: 1565.63 m
+Temperature: 22.85 C
+Pressure: 838.80 Kpa
+Humidity 35.02 %
+Gas: 5718.000000 Ohms
+[11:06:42] Recieved Altimeter Packet
+[11:06:42] Recieved: 
+Altitude: 1565.70 m
+Temperature: 22.86 C
+Pressure: 838.79 Kpa
+Humidity 34.98 %
+Gas: 5776.000000 Ohms
+[11:06:45] Recieved Altimeter Packet
+[11:06:45] Recieved: 
+Altitude: 1565.66 m
+Temperature: 22.88 C
+Pressure: 838.80 Kpa
+Humidity 34.99 %
+Gas: 5835.000000 Ohms
+[11:06:46] Recieved Altimeter Packet
+[11:06:46] Recieved: 
+Altitude: 1565.65 m
+Temperature: 22.90 C
+Pressure: 838.80 Kpa
+Humidity 35.03 %
+Gas: 5899.000000 Ohms
+[11:06:50] Recieved Altimeter Packet
+[11:06:50] Recieved: 
+Altitude: 1565.66 m
+Temperature: 22.92 C
+Pressure: 838.80 Kpa
+Humidity 35.05 %
+Gas: 5941.000000 Ohms
+[11:06:51] Recieved Altimeter Packet
+[11:06:51] Recieved: 
+Altitude: 1565.64 m
+Temperature: 22.94 C
+Pressure: 838.80 Kpa
+Humidity 35.12 %
+Gas: 5995.000000 Ohms
+[11:06:54] Recieved Altimeter Packet
+[11:06:54] Recieved: 
+Altitude: 1565.63 m
+Temperature: 22.96 C
+Pressure: 838.80 Kpa
+Humidity 35.13 %
+Gas: 6046.000000 Ohms
+[11:06:56] Recieved Altimeter Packet
+[11:06:56] Recieved: 
+Altitude: 1565.64 m
+Temperature: 22.97 C
+Pressure: 838.80 Kpa
+Humidity 35.06 %
+Gas: 6124.000000 Ohms
+[11:06:59] Recieved Altimeter Packet
+[11:06:59] Recieved: 
+Altitude: 1565.64 m
+Temperature: 22.99 C
+Pressure: 838.80 Kpa
+Humidity 34.92 %
+Gas: 6227.000000 Ohms
+[11:07:01] Recieved Altimeter Packet
+[11:07:01] Recieved: 
+Altitude: 1565.65 m
+Temperature: 23.01 C
+Pressure: 838.80 Kpa
+Humidity 34.77 %
+Gas: 6231.000000 Ohms
+[11:07:04] Recieved Altimeter Packet
+[11:07:04] Recieved: 
+Altitude: 1565.65 m
+Temperature: 23.02 C
+Pressure: 838.80 Kpa
+Humidity 34.66 %
+Gas: 6291.000000 Ohms
+[11:07:05] Recieved Altimeter Packet
+[11:07:05] Recieved: 
+Altitude: 1565.58 m
+Temperature: 23.04 C
+Pressure: 838.81 Kpa
+Humidity 34.75 %
+Gas: 6310.000000 Ohms
+[11:07:08] Recieved Altimeter Packet
+[11:07:08] Recieved: 
+Altitude: 1565.56 m
+Temperature: 23.06 C
+Pressure: 838.81 Kpa
+Humidity 34.83 %
+Gas: 6357.000000 Ohms
+[11:07:10] Recieved Altimeter Packet
+[11:07:10] Recieved: 
+Altitude: 1565.75 m
+Temperature: 23.07 C
+Pressure: 838.79 Kpa
+Humidity 34.86 %
+Gas: 6390.000000 Ohms
+[11:07:13] Recieved Altimeter Packet
+[11:07:13] Recieved: 
+Altitude: 1565.77 m
+Temperature: 23.09 C
+Pressure: 838.79 Kpa
+Humidity 34.79 %
+Gas: 6453.000000 Ohms
+[11:07:15] Recieved Altimeter Packet
+[11:07:15] Recieved: 
+Altitude: 1565.76 m
+Temperature: 23.10 C
+Pressure: 838.79 Kpa
+Humidity 34.70 %
+Gas: 6487.000000 Ohms
+[11:07:18] Recieved Altimeter Packet
+[11:07:18] Recieved: 
+Altitude: 1565.77 m
+Temperature: 23.12 C
+Pressure: 838.79 Kpa
+Humidity 34.62 %
+Gas: 6512.000000 Ohms
+[11:07:19] Recieved Altimeter Packet
+[11:07:19] Recieved: 
+Altitude: 1565.81 m
+Temperature: 23.13 C
+Pressure: 838.78 Kpa
+Humidity 34.54 %
+Gas: 6572.000000 Ohms
+[11:07:22] Recieved Altimeter Packet
+[11:07:22] Recieved: 
+Altitude: 1565.84 m
+Temperature: 23.15 C
+Pressure: 838.78 Kpa
+Humidity 34.46 %
+Gas: 6592.000000 Ohms
+[11:07:24] Recieved Altimeter Packet
+[11:07:24] Recieved: 
+Altitude: 1565.82 m
+Temperature: 23.17 C
+Pressure: 838.78 Kpa
+Humidity 34.48 %
+Gas: 6577.000000 Ohms
+[11:07:27] Recieved Altimeter Packet
+[11:07:27] Recieved: 
+Altitude: 1565.83 m
+Temperature: 23.18 C
+Pressure: 838.78 Kpa
+Humidity 34.74 %
+Gas: 6649.000000 Ohms
+[11:07:29] Recieved Altimeter Packet
+[11:07:29] Recieved: 
+Altitude: 1565.75 m
+Temperature: 23.20 C
+Pressure: 838.79 Kpa
+Humidity 34.84 %
+Gas: 6592.000000 Ohms
+[11:07:32] Recieved Altimeter Packet
+[11:07:32] Recieved: 
+Altitude: 1565.82 m
+Temperature: 23.21 C
+Pressure: 838.78 Kpa
+Humidity 34.81 %
+Gas: 6680.000000 Ohms
+[11:07:34] Recieved Altimeter Packet
+[11:07:34] Recieved: 
+Altitude: 1565.90 m
+Temperature: 23.23 C
+Pressure: 838.77 Kpa
+Humidity 34.71 %
+Gas: 6712.000000 Ohms
+[11:07:37] Recieved Altimeter Packet
+[11:07:37] Recieved: 
+Altitude: 1565.87 m
+Temperature: 23.24 C
+Pressure: 838.77 Kpa
+Humidity 34.63 %
+Gas: 6759.000000 Ohms
+[11:07:38] Recieved Altimeter Packet
+[11:07:38] Recieved: 
+Altitude: 1565.83 m
+Temperature: 23.26 C
+Pressure: 838.78 Kpa
+Humidity 34.55 %
+Gas: 6754.000000 Ohms
+[11:07:41] Recieved Altimeter Packet
+[11:07:41] Recieved: 
+Altitude: 1565.84 m
+Temperature: 23.27 C
+Pressure: 838.78 Kpa
+Humidity 34.48 %
+Gas: 6830.000000 Ohms
+[11:07:43] Recieved Altimeter Packet
+[11:07:43] Recieved: 
+Altitude: 1565.83 m
+Temperature: 23.29 C
+Pressure: 838.78 Kpa
+Humidity 34.38 %
+Gas: 6841.000000 Ohms
+[11:07:46] Recieved Altimeter Packet
+[11:07:46] Recieved: 
+Altitude: 1565.84 m
+Temperature: 23.30 C
+Pressure: 838.78 Kpa
+Humidity 34.31 %
+Gas: 6874.000000 Ohms
+[11:07:48] Recieved Altimeter Packet
+[11:07:48] Recieved: 
+Altitude: 1565.81 m
+Temperature: 23.32 C
+Pressure: 838.78 Kpa
+Humidity 34.25 %
+Gas: 6890.000000 Ohms
+[11:07:51] Recieved Altimeter Packet
+[11:07:51] Recieved: 
+Altitude: 1565.77 m
+Temperature: 23.33 C
+Pressure: 838.79 Kpa
+Humidity 34.21 %
+Gas: 6885.000000 Ohms
+[11:07:52] Recieved Altimeter Packet
+[11:07:52] Recieved: 
+Altitude: 1565.81 m
+Temperature: 23.35 C
+Pressure: 838.78 Kpa
+Humidity 34.20 %
+Gas: 6913.000000 Ohms
+[11:07:55] Recieved Altimeter Packet
+[11:07:55] Recieved: 
+Altitude: 1565.84 m
+Temperature: 23.36 C
+Pressure: 838.78 Kpa
+Humidity 34.20 %
+Gas: 6986.000000 Ohms
+[11:07:57] Recieved Altimeter Packet
+[11:07:57] Recieved: 
+Altitude: 1565.83 m
+Temperature: 23.38 C
+Pressure: 838.78 Kpa
+Humidity 34.19 %
+Gas: 6958.000000 Ohms
+[11:08:00] Recieved Altimeter Packet
+[11:08:00] Recieved: 
+Altitude: 1565.89 m
+Temperature: 23.40 C
+Pressure: 838.77 Kpa
+Humidity 34.17 %
+Gas: 6958.000000 Ohms
+[11:08:02] Recieved Altimeter Packet
+[11:08:02] Recieved: 
+Altitude: 1565.92 m
+Temperature: 23.41 C
+Pressure: 838.77 Kpa
+Humidity 34.19 %
+Gas: 6981.000000 Ohms
+[11:08:05] Recieved Altimeter Packet
+[11:08:05] Recieved: 
+Altitude: 1565.92 m
+Temperature: 23.43 C
+Pressure: 838.77 Kpa
+Humidity 34.17 %
+Gas: 7015.000000 Ohms
+[11:08:06] Recieved Altimeter Packet
+[11:08:06] Recieved: 
+Altitude: 1565.99 m
+Temperature: 23.44 C
+Pressure: 838.76 Kpa
+Humidity 34.12 %
+Gas: 7044.000000 Ohms
+[11:08:09] Recieved Altimeter Packet
+[11:08:09] Recieved: 
+Altitude: 1566.00 m
+Temperature: 23.45 C
+Pressure: 838.76 Kpa
+Humidity 34.04 %
+Gas: 7109.000000 Ohms
+[11:08:11] Recieved Altimeter Packet
+[11:08:11] Recieved: 
+Altitude: 1565.97 m
+Temperature: 23.47 C
+Pressure: 838.77 Kpa
+Humidity 33.96 %
+Gas: 7067.000000 Ohms
+[11:08:14] Recieved Altimeter Packet
+[11:08:14] Recieved: 
+Altitude: 1565.99 m
+Temperature: 23.48 C
+Pressure: 838.76 Kpa
+Humidity 33.91 %
+Gas: 7091.000000 Ohms
+[11:08:16] Recieved Altimeter Packet
+[11:08:16] Recieved: 
+Altitude: 1565.98 m
+Temperature: 23.49 C
+Pressure: 838.76 Kpa
+Humidity 33.86 %
+Gas: 7126.000000 Ohms
+[11:08:19] Recieved Altimeter Packet
+[11:08:19] Recieved: 
+Altitude: 1565.96 m
+Temperature: 23.50 C
+Pressure: 838.77 Kpa
+Humidity 33.84 %
+Gas: 7156.000000 Ohms
+[11:08:21] Recieved Altimeter Packet
+[11:08:21] Recieved: 
+Altitude: 1565.95 m
+Temperature: 23.51 C
+Pressure: 838.77 Kpa
+Humidity 33.81 %
+Gas: 7126.000000 Ohms
+[11:08:24] Recieved Altimeter Packet
+[11:08:24] Recieved: 
+Altitude: 1565.86 m
+Temperature: 23.53 C
+Pressure: 838.78 Kpa
+Humidity 33.80 %
+Gas: 7193.000000 Ohms
+[11:08:25] Recieved Altimeter Packet
+[11:08:25] Recieved: 
+Altitude: 1565.83 m
+Temperature: 23.54 C
+Pressure: 838.78 Kpa
+Humidity 33.78 %
+Gas: 7193.000000 Ohms
+[11:08:28] Recieved Altimeter Packet
+[11:08:28] Recieved: 
+Altitude: 1565.92 m
+Temperature: 23.55 C
+Pressure: 838.77 Kpa
+Humidity 33.74 %
+Gas: 7168.000000 Ohms
+[11:08:30] Recieved Altimeter Packet
+[11:08:30] Recieved: 
+Altitude: 1565.93 m
+Temperature: 23.56 C
+Pressure: 838.77 Kpa
+Humidity 33.70 %
+Gas: 7205.000000 Ohms
+[11:08:33] Recieved Altimeter Packet
+[11:08:33] Recieved: 
+Altitude: 1565.92 m
+Temperature: 23.57 C
+Pressure: 838.77 Kpa
+Humidity 33.64 %
+Gas: 7217.000000 Ohms
+[11:08:35] Recieved Altimeter Packet
+[11:08:35] Recieved: 
+Altitude: 1565.90 m
+Temperature: 23.59 C
+Pressure: 838.77 Kpa
+Humidity 33.61 %
+Gas: 7260.000000 Ohms
+[11:08:38] Recieved Altimeter Packet
+[11:08:38] Recieved: 
+Altitude: 1565.90 m
+Temperature: 23.60 C
+Pressure: 838.77 Kpa
+Humidity 33.58 %
+Gas: 7241.000000 Ohms
+[11:08:39] Recieved Altimeter Packet
+[11:08:39] Recieved: 
+Altitude: 1566.00 m
+Temperature: 23.61 C
+Pressure: 838.76 Kpa
+Humidity 33.54 %
+Gas: 7272.000000 Ohms
+[11:08:42] Recieved Altimeter Packet
+[11:08:42] Recieved: 
+Altitude: 1566.00 m
+Temperature: 23.63 C
+Pressure: 838.76 Kpa
+Humidity 33.53 %
+Gas: 7297.000000 Ohms
+[11:08:44] Recieved Altimeter Packet
+[11:08:44] Recieved: 
+Altitude: 1566.02 m
+Temperature: 23.64 C
+Pressure: 838.76 Kpa
+Humidity 33.50 %
+Gas: 7310.000000 Ohms
+[11:08:47] Recieved Altimeter Packet
+[11:08:47] Recieved: 
+Altitude: 1566.13 m
+Temperature: 23.65 C
+Pressure: 838.75 Kpa
+Humidity 33.45 %
+Gas: 7278.000000 Ohms
+[11:08:49] Recieved Altimeter Packet
+[11:08:49] Recieved: 
+Altitude: 1566.17 m
+Temperature: 23.67 C
+Pressure: 838.74 Kpa
+Humidity 33.40 %
+Gas: 7303.000000 Ohms
+[11:08:52] Recieved Altimeter Packet
+[11:08:52] Recieved: 
+Altitude: 1566.14 m
+Temperature: 23.69 C
+Pressure: 838.75 Kpa
+Humidity 33.34 %
+Gas: 7335.000000 Ohms
+[11:08:53] Recieved Altimeter Packet
+[11:08:53] Recieved: 
+Altitude: 1566.17 m
+Temperature: 23.70 C
+Pressure: 838.74 Kpa
+Humidity 33.31 %
+Gas: 7386.000000 Ohms
+[11:08:56] Recieved Altimeter Packet
+[11:08:56] Recieved: 
+Altitude: 1566.24 m
+Temperature: 23.72 C
+Pressure: 838.74 Kpa
+Humidity 33.28 %
+Gas: 7386.000000 Ohms
+[11:08:58] Recieved Altimeter Packet
+[11:08:58] Recieved: 
+Altitude: 1566.33 m
+Temperature: 23.73 C
+Pressure: 838.73 Kpa
+Humidity 33.24 %
+Gas: 7392.000000 Ohms
+[11:09:01] Recieved Altimeter Packet
+[11:09:01] Recieved: 
+Altitude: 1566.39 m
+Temperature: 23.74 C
+Pressure: 838.72 Kpa
+Humidity 33.22 %
+Gas: 7341.000000 Ohms
+[11:09:03] Recieved Altimeter Packet
+[11:09:03] Recieved: 
+Altitude: 1566.47 m
+Temperature: 23.76 C
+Pressure: 838.71 Kpa
+Humidity 33.25 %
+Gas: 7398.000000 Ohms
+[11:09:06] Recieved Altimeter Packet
+[11:09:06] Recieved: 
+Altitude: 1566.49 m
+Temperature: 23.77 C
+Pressure: 838.71 Kpa
+Humidity 33.36 %
+Gas: 7392.000000 Ohms
+[11:09:08] Recieved Altimeter Packet
+[11:09:08] Recieved: 
+Altitude: 1566.53 m
+Temperature: 23.79 C
+Pressure: 838.71 Kpa
+Humidity 33.36 %
+Gas: 7392.000000 Ohms
+[11:09:11] Recieved Altimeter Packet
+[11:09:11] Recieved: 
+Altitude: 1566.63 m
+Temperature: 23.81 C
+Pressure: 838.70 Kpa
+Humidity 33.28 %
+Gas: 7418.000000 Ohms
+[11:09:12] Recieved Altimeter Packet
+[11:09:12] Recieved: 
+Altitude: 1566.72 m
+Temperature: 23.82 C
+Pressure: 838.69 Kpa
+Humidity 33.22 %
+Gas: 7437.000000 Ohms
+[11:09:15] Recieved Altimeter Packet
+[11:09:15] Recieved: 
+Altitude: 1566.73 m
+Temperature: 23.83 C
+Pressure: 838.69 Kpa
+Humidity 33.17 %
+Gas: 7431.000000 Ohms
+[11:09:17] Recieved Altimeter Packet
+[11:09:17] Recieved: 
+Altitude: 1566.70 m
+Temperature: 23.85 C
+Pressure: 838.69 Kpa
+Humidity 33.12 %
+Gas: 7463.000000 Ohms
+[11:09:20] Recieved Altimeter Packet
+[11:09:20] Recieved: 
+Altitude: 1566.70 m
+Temperature: 23.86 C
+Pressure: 838.69 Kpa
+Humidity 33.07 %
+Gas: 7463.000000 Ohms
+[11:09:22] Recieved Altimeter Packet
+[11:09:22] Recieved: 
+Altitude: 1566.70 m
+Temperature: 23.87 C
+Pressure: 838.69 Kpa
+Humidity 33.05 %
+Gas: 7502.000000 Ohms
+[11:09:25] Recieved Altimeter Packet
+[11:09:25] Recieved: 
+Altitude: 1566.72 m
+Temperature: 23.89 C
+Pressure: 838.69 Kpa
+Humidity 33.04 %
+Gas: 7457.000000 Ohms
+[11:09:26] Recieved Altimeter Packet
+[11:09:26] Recieved: 
+Altitude: 1566.68 m
+Temperature: 23.90 C
+Pressure: 838.69 Kpa
+Humidity 33.02 %
+Gas: 7463.000000 Ohms
+[11:09:29] Recieved Altimeter Packet
+[11:09:29] Recieved: 
+Altitude: 1566.72 m
+Temperature: 23.92 C
+Pressure: 838.69 Kpa
+Humidity 32.99 %
+Gas: 7483.000000 Ohms
+[11:09:31] Recieved Altimeter Packet
+[11:09:31] Recieved: 
+Altitude: 1566.78 m
+Temperature: 23.93 C
+Pressure: 838.68 Kpa
+Humidity 32.94 %
+Gas: 7509.000000 Ohms
+[11:09:34] Recieved Altimeter Packet
+[11:09:34] Recieved: 
+Altitude: 1566.80 m
+Temperature: 23.94 C
+Pressure: 838.68 Kpa
+Humidity 32.89 %
+Gas: 7502.000000 Ohms
+[11:09:36] Recieved Altimeter Packet
+[11:09:36] Recieved: 
+Altitude: 1566.84 m
+Temperature: 23.96 C
+Pressure: 838.68 Kpa
+Humidity 32.88 %
+Gas: 7496.000000 Ohms
+[11:09:39] Recieved Altimeter Packet
+[11:09:39] Recieved: 
+Altitude: 1566.87 m
+Temperature: 23.97 C
+Pressure: 838.67 Kpa
+Humidity 32.86 %
+Gas: 7502.000000 Ohms
+[11:09:40] Recieved Altimeter Packet
+[11:09:40] Recieved: 
+Altitude: 1566.91 m
+Temperature: 23.98 C
+Pressure: 838.67 Kpa
+Humidity 32.85 %
+Gas: 7522.000000 Ohms
+[11:09:43] Recieved Altimeter Packet
+[11:09:43] Recieved: 
+Altitude: 1566.97 m
+Temperature: 23.99 C
+Pressure: 838.66 Kpa
+Humidity 32.81 %
+Gas: 7549.000000 Ohms
+[11:09:45] Recieved Altimeter Packet
+[11:09:45] Recieved: 
+Altitude: 1566.92 m
+Temperature: 24.01 C
+Pressure: 838.67 Kpa
+Humidity 32.80 %
+Gas: 7536.000000 Ohms
+[11:09:48] Recieved Altimeter Packet
+[11:09:48] Recieved: 
+Altitude: 1567.02 m
+Temperature: 24.02 C
+Pressure: 838.66 Kpa
+Humidity 32.79 %
+Gas: 7562.000000 Ohms
+[11:09:50] Recieved Altimeter Packet
+[11:09:50] Recieved: 
+Altitude: 1567.01 m
+Temperature: 24.03 C
+Pressure: 838.66 Kpa
+Humidity 32.71 %
+Gas: 7549.000000 Ohms
+[11:09:53] Recieved Altimeter Packet
+[11:09:53] Recieved: 
+Altitude: 1567.03 m
+Temperature: 24.04 C
+Pressure: 838.66 Kpa
+Humidity 32.67 %
+Gas: 7562.000000 Ohms
+[11:09:55] Recieved Altimeter Packet
+[11:09:55] Recieved: 
+Altitude: 1566.98 m
+Temperature: 24.05 C
+Pressure: 838.66 Kpa
+Humidity 32.63 %
+Gas: 7576.000000 Ohms
+[11:09:58] Recieved Altimeter Packet
+[11:09:58] Recieved: 
+Altitude: 1567.01 m
+Temperature: 24.06 C
+Pressure: 838.66 Kpa
+Humidity 32.58 %
+Gas: 7582.000000 Ohms
+[11:09:59] Recieved Altimeter Packet
+[11:09:59] Recieved: 
+Altitude: 1566.96 m
+Temperature: 24.07 C
+Pressure: 838.66 Kpa
+Humidity 32.57 %
+Gas: 7616.000000 Ohms
+
+---Welcome To The Groundstation---
+
+[11:18:32] Initialized Transciever
+[11:18:32] Initialized Threads
+[11:18:32] Attempting To Connect
+[11:18:32] Collected 2 Ports
+[11:18:32] Checking Port: COM16 - USB Serial Device (COM16)
+[11:18:32] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[11:18:32] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[11:18:32] Assigned Port: COM17
+
+[11:18:32] Started Threads
+[11:18:37] Sent: ping
+
+---Welcome To The Groundstation---
+
+[11:20:24] Initialized Transciever
+[11:20:24] Initialized Threads
+[11:20:24] Attempting To Connect
+[11:20:24] Collected 2 Ports
+[11:20:25] Checking Port: COM16 - USB Serial Device (COM16)
+[11:20:25] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[11:20:25] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[11:20:25] Assigned Port: COM17
+
+[11:20:25] Started Threads
+[11:20:28] Sent: ping
+[11:20:52] Sent: ping
+[11:21:39] Sent: ping
+[11:22:08] Recieved: cubesat initialized
+[11:22:21] Sent: ping
+[11:22:23] Recieved: pong
+[11:23:03] Recieved: cubesat initialized
+[11:23:14] Sent: ping
+[11:23:16] Recieved: pong
+[11:23:24] Sent: set dosend gps true
+[11:23:57] Recieved: cubesat initialized
+[11:26:27] Recieved: cubesat initialized
+[11:27:47] Recieved: cubesat initialized
+[11:28:02] Recieved: cubesat initialized
+
+---Welcome To The Groundstation---
+
+[11:31:44] Initialized Transciever
+[11:31:44] Initialized Threads
+[11:31:44] Attempting To Connect
+[11:31:44] Collected 2 Ports
+[11:31:44] Checking Port: COM16 - USB Serial Device (COM16)
+[11:31:44] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[11:31:44] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[11:31:44] Assigned Port: COM17
+
+[11:31:44] Started Threads
+[11:31:46] Recieved GPS Packet
+[11:31:46] Recieved: 
+Latitude: 39.701950 Degress
+Longitude: -104.955627 Degrees
+Altitude: 171.50 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.98
+[11:31:48] Recieved GPS Packet
+[11:31:48] Recieved: 
+Latitude: 39.701889 Degress
+Longitude: -104.955750 Degrees
+Altitude: 171.50 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.98
+[11:31:51] Recieved GPS Packet
+[11:31:51] Recieved: 
+Latitude: 39.701889 Degress
+Longitude: -104.955750 Degrees
+Altitude: 171.50 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.98
+[11:31:53] Recieved GPS Packet
+[11:31:53] Recieved: 
+Latitude: 39.701843 Degress
+Longitude: -104.955902 Degrees
+Altitude: 171.50 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.97
+[11:31:55] Recieved GPS Packet
+[11:31:55] Recieved: 
+Latitude: 39.701843 Degress
+Longitude: -104.955902 Degrees
+Altitude: 171.50 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.97
+[11:31:58] Recieved GPS Packet
+[11:31:58] Recieved: 
+Latitude: 39.701859 Degress
+Longitude: -104.955902 Degrees
+Altitude: 171.50 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.97
+[11:31:59] Recieved GPS Packet
+[11:31:59] Recieved: 
+Latitude: 39.701859 Degress
+Longitude: -104.955902 Degrees
+Altitude: 171.50 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.97
+[11:32:01] Recieved GPS Packet
+[11:32:01] Recieved: 
+Latitude: 39.701874 Degress
+Longitude: -104.955841 Degrees
+Altitude: 171.70 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.97
+[11:32:04] Recieved GPS Packet
+[11:32:04] Recieved: 
+Latitude: 39.701874 Degress
+Longitude: -104.955841 Degrees
+Altitude: 171.70 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.97
+[11:32:06] Recieved GPS Packet
+[11:32:06] Recieved: 
+Latitude: 39.701874 Degress
+Longitude: -104.955902 Degrees
+Altitude: 171.80 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.96
+[11:32:07] Recieved GPS Packet
+[11:32:07] Recieved: 
+Latitude: 39.701874 Degress
+Longitude: -104.955902 Degrees
+Altitude: 171.80 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.96
+[11:32:10] Recieved GPS Packet
+[11:32:10] Recieved: 
+Latitude: 39.701889 Degress
+Longitude: -104.955994 Degrees
+Altitude: 171.80 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.96
+[11:32:12] Recieved GPS Packet
+[11:32:12] Recieved: 
+Latitude: 39.701889 Degress
+Longitude: -104.955994 Degrees
+Altitude: 171.80 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.96
+[11:32:14] Recieved GPS Packet
+[11:32:14] Recieved: 
+Latitude: 39.701889 Degress
+Longitude: -104.955994 Degrees
+Altitude: 171.80 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.96
+[11:32:17] Recieved GPS Packet
+[11:32:17] Recieved: 
+Latitude: 39.701920 Degress
+Longitude: -104.956116 Degrees
+Altitude: 171.80 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.96
+[11:32:18] Recieved GPS Packet
+[11:32:18] Recieved: 
+Latitude: 39.701920 Degress
+Longitude: -104.956116 Degrees
+Altitude: 171.80 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.96
+[11:32:20] Recieved GPS Packet
+[11:32:20] Recieved: 
+Latitude: 39.702072 Degress
+Longitude: -104.956085 Degrees
+Altitude: 171.90 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.95
+[11:32:23] Recieved GPS Packet
+[11:32:23] Recieved: 
+Latitude: 39.702072 Degress
+Longitude: -104.956085 Degrees
+Altitude: 171.90 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.95
+[11:32:25] Recieved GPS Packet
+[11:32:25] Recieved: 
+Latitude: 39.702133 Degress
+Longitude: -104.955933 Degrees
+Altitude: 172.10 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.95
+[11:32:27] Recieved GPS Packet
+[11:32:27] Recieved: 
+Latitude: 39.702133 Degress
+Longitude: -104.955933 Degrees
+Altitude: 172.10 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.95
+[11:32:30] Recieved GPS Packet
+[11:32:30] Recieved: 
+Latitude: 39.702133 Degress
+Longitude: -104.955933 Degrees
+Altitude: 172.10 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.95
+[11:32:31] Recieved GPS Packet
+[11:32:31] Recieved: 
+Latitude: 39.702133 Degress
+Longitude: -104.955933 Degrees
+Altitude: 172.10 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.95
+[11:32:34] Recieved GPS Packet
+[11:32:34] Recieved: 
+Latitude: 39.702133 Degress
+Longitude: -104.955933 Degrees
+Altitude: 172.10 m
+ Speed: 1.11 m/s
+Satelites: 3
+DOP: 5.95
+
+---Welcome To The Groundstation---
+
+[12:22:32] Initialized Transciever
+[12:22:32] Initialized Threads
+[12:22:32] Attempting To Connect
+[12:22:32] Collected 2 Ports
+[12:22:32] Checking Port: COM16 - USB Serial Device (COM16)
+[12:22:32] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:22:32] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:22:32] Assigned Port: COM17
+
+[12:22:32] Started Threads
+[12:22:34] Sent: ping
+[12:22:36] Recieved GPS Packet
+
+---Welcome To The Groundstation---
+
+[12:23:36] Initialized Transciever
+[12:23:36] Initialized Threads
+[12:23:36] Attempting To Connect
+[12:23:36] Collected 2 Ports
+[12:23:36] Checking Port: COM16 - USB Serial Device (COM16)
+[12:23:36] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:23:36] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:23:36] Assigned Port: COM17
+
+[12:23:36] Started Threads
+[12:23:38] Recieved GPS Packet
+
+---Welcome To The Groundstation---
+
+[12:31:10] Initialized Transciever
+[12:31:10] Initialized Threads
+[12:31:10] Attempting To Connect
+[12:31:10] Collected 2 Ports
+[12:31:10] Checking Port: COM16 - USB Serial Device (COM16)
+[12:31:10] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:31:10] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:31:10] Assigned Port: COM17
+
+[12:31:10] Started Threads
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+[12:31:31] Sent: piping
+Recieved: failed to send gps data
+[12:31:36] Sent: ping
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+[12:31:50] Sent: ping
+Recieved: failed to send gps data
+Recieved: pongfailed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+
+---Welcome To The Groundstation---
+
+[12:35:30] Initialized Transciever
+[12:35:30] Initialized Threads
+[12:35:30] Attempting To Connect
+[12:35:30] Collected 2 Ports
+[12:35:30] Checking Port: COM16 - USB Serial Device (COM16)
+[12:35:30] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:35:30] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:35:30] Assigned Port: COM17
+
+[12:35:30] Started Threads
+Recieved: failed to send gps data
+Recieved: 
+Recieved: failed to send gps data
+Recieved: 
+Recieved: failed to send gps data
+Recieved: 
+Recieved: failed to send gps data
+Recieved: 
+
+---Welcome To The Groundstation---
+
+[12:36:59] Initialized Transciever
+[12:36:59] Initialized Threads
+[12:36:59] Attempting To Connect
+[12:36:59] Collected 2 Ports
+[12:36:59] Checking Port: COM16 - USB Serial Device (COM16)
+[12:36:59] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:36:59] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:36:59] Assigned Port: COM17
+
+[12:36:59] Started Threads
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+Recieved: failed to send gps data
+[12:37:15] Sent: set dosend gps false
+Recieved: set target value to: false
+[12:37:27] Sent: set dosend alt true
+Recieved: set target value to: true
+[12:37:30] Recieved Altimeter Packet
+
+---Welcome To The Groundstation---
+
+[12:39:21] Initialized Transciever
+[12:39:21] Initialized Threads
+[12:39:21] Attempting To Connect
+[12:39:21] Collected 2 Ports
+[12:39:21] Checking Port: COM16 - USB Serial Device (COM16)
+[12:39:21] Checking Port: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:39:21] Set Port To: COM17 - USB-Enhanced-SERIAL CH9102 (COM17)
+[12:39:21] Assigned Port: COM17
+
+[12:39:21] Started Threads
+[12:39:23] Recieved Altimeter Packet
+Recieved: 
+Altitude: 1588.96 m
+Temperature: 28.45 C
+Pressure: 836.40 Kpa
+Humidity 27.27 %
+Gas: 6517 Ohms
+[12:39:26] Recieved Altimeter Packet
+Recieved: 
+Altitude: 1589.00 m
+Temperature: 28.46 C
+Pressure: 836.39 Kpa
+Humidity 27.28 %
+Gas: 6592 Ohms
+[12:39:28] Recieved Altimeter Packet
+Recieved: 
+Altitude: 1589.00 m
+Temperature: 28.48 C
+Pressure: 836.39 Kpa
+Humidity 27.24 %
+Gas: 6613 Ohms
+[12:39:31] Recieved Altimeter Packet
+Recieved: 
+Altitude: 1588.98 m
+Temperature: 28.49 C
+Pressure: 836.40 Kpa
+Humidity 27.18 %
+Gas: 6664 Ohms
+[12:39:32] Recieved Altimeter Packet
+Recieved: 
+Altitude: 1588.94 m
+Temperature: 28.50 C
+Pressure: 836.40 Kpa
+Humidity 27.13 %
+Gas: 6654 Ohms
+[12:39:36] Recieved Altimeter Packet
+Recieved: 
+Altitude: 1589.00 m
+Temperature: 28.51 C
+Pressure: 836.39 Kpa
+Humidity 27.12 %
+Gas: 6675 Ohms
+[12:39:37] Recieved Altimeter Packet
+Recieved: 
+Altitude: 1589.00 m
+Temperature: 28.53 C
+Pressure: 836.39 Kpa
+Humidity 27.09 %
+Gas: 6722 Ohms
+[12:39:40] Recieved Altimeter Packet
+Recieved: 
+Altitude: 1588.98 m
+Temperature: 28.55 C
+Pressure: 836.40 Kpa
+Humidity 27.07 %
+Gas: 6706 Ohms
+[12:39:42] Recieved Altimeter Packet
+Recieved: 
+Altitude: 1588.95 m
+Temperature: 28.56 C
+Pressure: 836.40 Kpa
+Humidity 27.07 %
+Gas: 6727 Ohms
+[12:39:45] Recieved Altimeter Packet
+Recieved: 
+Altitude: 1588.93 m
+Temperature: 28.57 C
+Pressure: 836.40 Kpa
+Humidity 27.15 %
+Gas: 6759 Ohms
+[12:39:47] Recieved Altimeter Packet
+Recieved: 
+Altitude: 1588.90 m
+Temperature: 28.58 C
+Pressure: 836.40 Kpa
+Humidity 27.11 %
+Gas: 6781 Ohms
+[12:39:50] Recieved Altimeter Packet
+Recieved: 
+Altitude: 1588.92 m
+Temperature: 28.58 C
+Pressure: 836.40 Kpa
+Humidity 27.07 %
+Gas: 6841 Ohms
+[12:39:51] Recieved Altimeter Packet
+Recieved: 
+Altitude: 1588.95 m
+Temperature: 28.59 C
+Pressure: 836.40 Kpa
+Humidity 27.03 %
+Gas: 6852 Ohms
+[12:39:54] Sent: set dosend alt false
+[12:39:54] Recieved Altimeter Packet
+Recieved: 
+Altitude: 1588.95 m
+Temperature: 28.59 C
+Pressure: 836.40 Kpa
+Humidity 26.97 %
+Gas: 6890 Ohms
+Recieved: set target value to: false
