@@ -21,9 +21,20 @@ from adafruit_ina219 import ADCResolution, BusVoltageRange, INA219
 try:
     class GPS:
         def __init__(self):
+            self.interface = adafruit_gps.GPS(busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10),debug=False)
         
         def __repr__(self):
-            return "X: "+self.x
+            return ("Latitude:{:.6f}"+
+                    "Longitude:{:.6f}"+
+                    "Altitude:{:.2f}"+
+                    "Speed:{:.2f}"+
+                    "Satelites:{}"+
+                    "DOP:{}").format(
+                        self.interface.latitude,
+                        self.interface.longitude,
+                        self.interface.altitude_m,
+                        self.interface.speed_knots*(463/900)
+                    )
     
     class LED:
         def __init__(self, boardPin):
