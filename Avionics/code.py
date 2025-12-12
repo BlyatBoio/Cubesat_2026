@@ -19,31 +19,75 @@ from adafruit_datetime import datetime, date, time
 from adafruit_ina219 import ADCResolution, BusVoltageRange, INA219
 
 try:
-    sdcard = adafruit_sdcard.SDCard(busio.SPI(board.GP10,MOSI=board.GP11,MISO=board.GP12),digitalio.DigitalInOut(board.GP13))
+    # Define bord access points
+    SPI1 = busio.SPI(board.GP10,MOSI=board.GP11,MISO=board.GP12)
+    CS1 = digitalio.DigitalInOut(board.GP13)
+
+    sdcard = adafruit_sdcard.SDCard(SPI1,CS1)
     vfs = storage.VfsFat(sdcard)
     storage.mount(vfs, "/sd")
+    config_file = "config.txt"
+        
     I2C0 = busio.I2C(board.GP1,board.GP0,frequency=10000)
     UART0 = busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10)
 
-    doSendGps = False
-    doSendAlt = False
-    doSendImu = True
-    doSendMag = False
-    doSendPow = False
-    
+    class cubesatConfig:
+        def __init__(self):
+            self.doSendGps = False
+            self.doSendAlt = False
+            self.doSendImu = False
+            self.doSendMag = False
+            self.doSendPow = False
+            self.doPing = False
+            self.pingInterval = 1
+        def loadConfig(self):
+            with open(config_file, "r") as configFile:
+                newConfig = configFile.readLines()
+
+                if(newConfig[0] is ""): return
+
+                self.doSendGps = True if newConfig[0]=="t" else False
+                self.doSendAlt = True if newConfig[1]=="t" else False
+                self.doSendImu = True if newConfig[2]=="t" else False
+                self.doSendMag = True if newConfig[3]=="t" else False
+                self.doSendPow = True if newConfig[4]=="t" else False
+                self.doPing = True if newConfig[5]=="t" else False
+                self.pingInterval = int(newConfig[6])
+        
+        def saveConfig(self):
+            with open(config_file, "w") as configFile:
+                configFile.write(
+                    ("t"if self.doSendGps else"f")+"\n",
+                    ("t"if self.doSendAlt else"f")+"\n",
+                    ("t"if self.doSendImu else"f")+"\n",
+                    ("t"if self.doSendMag else"f")+"\n",
+                    ("t"if self.doSendPow else"f")+"\n",
+                    ("t"if self.doPing else"f")s+"\n",
+                    str(self.pingInterval)+"\n")
+
+            radio.sendString("Config Updated")
+
+     # Load Data From Config
+    config = cubesatConfig()
+
     class GPS:
         def __init__(self):
             try:
+                # Define access point for GPS Data
                 self.interface = adafruit_gps.GPS(UART0,debug=False)
                 
-                self.interface.send_command(b'PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0') #Issues parameters to GPS
+                #Issues parameters to GPS
+                self.interface.send_command(b'PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0')
                 self.interface.send_command(b'PMTK220,1000')
             except:
                 radio.sendError("Failed To Setup GPS" )
         
         def getData(self):
             try:
+                # Collect data from GPS into interface object
                 self.interface.update()
+
+                # Format GPS Data as a string
                 return "GPS {:.6f} {:.6f} {:.2f} {:.2f} {} {}".format(
                     self.interface.latitude,
                     self.interface.longitude,
@@ -57,16 +101,18 @@ try:
     class Altimeter:
         def __init__(self):
             try:
+                # Define access point for Altimeter Data
                 self.interface = adafruit_bme680.Adafruit_BME680_I2C(I2C0, address=0x77)
 
+                # Set default parameters for the interface
                 self.interface.sea_level_pressure = 1013.25
-                
                 self.interface.pressure_oversampling = 8
                 self.interface.temperature_oversampling = 2
             except:
                 radio.sendError("Failed To Setup Altimeter ")
         
         def getData(self):
+            # Format Altimeter data as a string
             return "ALT {:.2f} {:.2f} {:.2f} {:.2f} {:.0f}".format(
                 self.interface.altitude,
                 self.interface.temperature,
@@ -77,10 +123,12 @@ try:
     class IMU:
         def __init__(self):
             try:
+                # Define access point for IMU Data
                 self.interface = LSM6DSOX(I2C0,address=0x6a)
             except:
                 radio.sendError("Failed To Setup IMU ")
         def getData(self):
+            # Format IMU data as a string
             return "IMU {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f}".format(
                 self.interface.acceleration[0],
                 self.interface.acceleration[1],
@@ -92,10 +140,12 @@ try:
     class Magnometer:
         def __init__(self):
             try:
+                # Define access point for Magnometer Data
                 self.interface = LIS3MDL(I2C0,address=0x1c)
             except:
                 radio.sendError("Failed To Setup Magnometer ")
         def getData(self):
+            # Format Magnometer data as a string
             return "MAG {:.2f} {:.2f} {:.2f}".format(
                 self.interface.magnetic[0],
                 self.interface.magnetic[1],
@@ -104,21 +154,26 @@ try:
     class Power:
         def __init__(self):
             try:
+                # Define access point for Power Draw Data
                 self.powerDrawInterface = INA219(I2C0,addr=0x45)
 
+                # Set default parameters for the interface
                 self.powerDrawInterface.bus_adc_resolution = ADCResolution.ADCRES_12BIT_32S
                 self.powerDrawInterface.shunt_adc_resolution = ADCResolution.ADCRES_12BIT_32S
                 self.powerDrawInterface.bus_voltage_range = BusVoltageRange.RANGE_16V
                 
+                # Define access point for Solar Data
                 self.solar1Inteface = Solar(0x40)
                 self.solar2Inteface = Solar(0x41)
                 self.solar3Inteface = Solar(0x44)
                 
+                # Define access point for Batery Data
                 self.batteryInterface = adafruit_max1704x.MAX17048(I2C0,address=0x36)
             except:
                 radio.sendError("Failed To Setup Power ")
         def getData(self):
             try:
+                # Format Power Data (Currently without solar)
                 return "POW {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.2f} {:.2f}".format(
                     self.powerDrawInterface.bus_voltage,
                     self.powerDrawInterface.current / 1000,
@@ -137,13 +192,15 @@ try:
                     self.batteryInterface.cell_voltage,
                     self.batteryInterface.cell_percent)
             except:
-                return "Failed To Send Power Data"
+                return "err Failed To Send Power Data"
 
     class Solar:
         def __init__(self, adress):
             try:
+                # Define access point for Solar Data
                 self.interface = INA219(I2C0,addr=adress)
                 
+                # Set default parameters for the interface
                 self.interface.bus_adc_resolution = ADCResolution.ADCRES_12BIT_32S
                 self.interface.shunt_adc_resolution = ADCResolution.ADCRES_12BIT_32S
                 self.interface.bus_voltage_range = BusVoltageRange.RANGE_16V
@@ -152,6 +209,7 @@ try:
     
     class LED:
         def __init__(self, boardPin):
+                # Define access point LED Object
             self.boardPin = boardPin
             self.interface = digitalio.DigitalInOut(self.boardPin)
             self.interface.direction = digitalio.Direction.OUTPUT
@@ -181,6 +239,7 @@ try:
             M0.value = False
             M1.value = False
             
+            # Define access point for Tansciever
             self.interface = busio.UART(board.GP8,board.GP9,baudrate=9600,timeout=0.1)
 
         def sendString(self, string):
@@ -196,92 +255,124 @@ try:
             return self.interface.read(960)
     
     def processCommand():
-        
-        global doSendGps
-        global doSendAlt
-        global doSendImu
-        global doSendMag
-        global doSendPow
-        
+        # read the recieved data from the radio
         inString = str(radio.readIncoming())
         
-        if(inString is not "None"):
-            receiveLED.turnOn()
-        else:
-            return
+        # if there is a command, toggle LED and continue
+        if(inString is not "None"): receiveLED.turnOn()
+        else: return
         
+        # Format string to be more default and readable
         inString = inString.lower()
         inString = inString[2:] # remove(b')
         inString = inString.replace(" ", "")
-        inString = inString.replace("'", "")
+        inString = inString.replace("'", "") # remove end '
 
-        #radio.sendString("Recieved Command: " + inString + "\n")
         try:
+            # Ping the cube for a response
             if inString[0:4] is "ping":
                 radio.sendString("pong")
-            elif inString[0:6] is "toggle":
-                inString = inString[6:]
-                if inString[0:4] is "data":
-                    inString = inString[4:]
-                    #setValue = True if inString[3:7] is "true" else False
+            elif inString[0:3] is "set":
+                inString = inString[3:]
+
+                # Toggle what data is sent down
+                if inString[0:6] is "dosend":
+                    inString = inString[6:]
+                    value = True if inString[3:7] == "true" else False
+
                     if inString[0:3] is "gps":
-                        doSendGps = not doSendGps
-                        radio.sendString(("Now" if doSendGps else "Stopped") + " Sending GPS Data")              
+                        config.doSendGps = value
+                        radio.sendString(("Now" if config.doSendGps else "Stopped") + " Sending GPS Data")              
+                        config.saveConfig()
                     elif inString[0:3] is "alt":
-                        doSendAlt = not doSendAlt
-                        radio.sendString(("Now" if doSendAlt else "Stopped") + " Sending Altimeter Data")              
+                        config.doSendAlt = value
+                        radio.sendString(("Now" if config.doSendAlt else "Stopped") + " Sending Altimeter Data")              
+                        config.saveConfig()
                     elif inString[0:3] is "imu":
-                        doSendImu = not doSendImu
-                        radio.sendString(("Now" if doSendImu else "Stopped") + " Sending IMU Data")              
+                        config.doSendImu = value
+                        radio.sendString(("Now" if config.doSendImu else "Stopped") + " Sending IMU Data")              
+                        config.saveConfig()
                     elif inString[0:3] is "mag":
-                        doSendMag = not doSendMag
-                        radio.sendString(("Now" if doSendMag else "Stopped") + " Sending Magnometer Data")              
+                        config.doSendMag = value
+                        radio.sendString(("Now" if config.doSendMag else "Stopped") + " Sending Magnometer Data")              
+                        config.saveConfig()
                     elif inString[0:3] is "pow":
-                        doSendPow = not doSendPow
-                        radio.sendString(("Now" if doSendPow else "Stopped") + " Sending Power Data")              
+                        config.doSendPow = value
+                        radio.sendString(("Now" if config.doSendPow else "Stopped") + " Sending Power Data")              
+                        config.saveConfig()
+                    elif inString[0:3] is "pin":
+                        config.doPing = value
+                        radio.sendString(("Now" if config.doPing else "Stopped") + " Sending Ping On The Interval: "+str(config.pingInterval)+" Clock Cycles")              
+                        config.saveConfig()
                     else:
                        radio.sendError("Command Not Understood")
-                elif inString[0:3] is "led":
-                    inString = inString[3:]
-                    if inString[0:3] is "gps":
-                        gpsLED.toggle()
-                    elif inString[0:2] is "tx":
-                        transmitLED.toggle()
-                    elif inString[0:2] is "rx":
-                        receiveLED.toggle()
-                    elif inString[0:2] is "sen":
-                        processLED.toggle()
-                    elif inString[0:2] is "err":
-                        errorLED.toggle()
-                    else:
-                       radio.sendError("Command Not Understood")
+                       
+                elif inString[0:4] is "ping":
+                    config.pingInterval = int(inString[4:])
+                    radio.sendString("Ping Interval Now: " + str(config.pingInterval) + " Clock Cycles")
+                    config.saveConfig()
                 else:
                     radio.sendError("Command Not Understood")
+            # Toggle on or off an LED
+            elif inString[0:3] is "led":
+                inString = inString[3:]
+                if inString[0:3] is "gps":
+                    gpsLED.toggle()
+                elif inString[0:2] is "tx":
+                    transmitLED.toggle()
+                elif inString[0:2] is "rx":
+                    receiveLED.toggle()
+                elif inString[0:2] is "sen":
+                    processLED.toggle()
+                elif inString[0:2] is "err":
+                    errorLED.toggle()
+                else:
+                    radio.sendError("Command Not Understood")
+
+            # get different data
             elif inString[0:3] is "get":
                 inString = inString[3:]
+
+                # Get whether or not a data type is being sent down
                 if inString[0:6] is "dosend":
                     inString = inString[6:]
                     if inString[0:3] is "gps":
-                        radio.sendString(str(doSendGps))
+                        radio.sendString(str(config.doSendGps))
                     elif inString[0:3] is "alt":
-                        radio.sendString(str(doSendAlt))
+                        radio.sendString(str(config.doSendAlt))
                     elif inString[0:3] is "imu":
-                        radio.sendString(str(doSendImu))
+                        radio.sendString(str(config.doSendImu))
                     elif inString[0:3] is "mag":
-                        radio.sendString(str(doSendMag))
+                        radio.sendString(str(config.doSendMag))
                     elif inString[0:3] is "pow":
-                        radio.sendString(str(doSendPow))
+                        radio.sendString(str(config.doSendPow))
                     else:
                         radio.sendError("Command Not Understood")
+                elif inString[0:6] is "config":
+                    inString = inString[6:]
+                    radio.sendString(
+                        "\nSend GPS:"+str(config.doSendGps)+"\n"+
+                        "Send Alt:"+str(config.doSendAlt)+"\n"+
+                        "Send IMU:"+str(config.doSendImu)+"\n"+
+                        "Send Mag:"+str(config.doSendMag)+"\n"+
+                        "Send Pow:"+str(config.doSendPow)+"\n"+
+                        "Send Ping:"+str(config.doPing)+"\n"+
+                        "Ping Interval:"+str(config.pingInterval)+"\n")
+                # Similar to ping but funner to type
                 elif inString[0:4] is "cube":
                     inString = inString[4:]
                     if inString[0:6] is "status":
                         radio.sendString("Alive")
                 else:
                     radio.sendError("Command Not Understood")
+            
+            # Reset Cube
             elif inString[0:5] is "reset":
+                #config.saveConfig()
                 radio.sendError("Reseting...")
                 microcontroller.reset()
+            
+            # Toggle lightshow
             elif inString[0:9] is "runlights":
                 startupLightshow()
             else:
@@ -291,18 +382,23 @@ try:
             radio.sendError("Failed To Interpret Command")        
         
     def sendData():
-        if doSendGps:
+        # Check which types of data should be send down
+        if config.doSendGps:
             radio.sendString(gps.getData())
-        if doSendAlt:
+        if config.doSendAlt:
             radio.sendString(altimeter.getData())
-        if doSendImu:
+        if config.doSendImu:
             radio.sendString(imu.getData())
-        if doSendMag:
+        if config.doSendMag:
             radio.sendString(magnometer.getData())
-        if doSendPow:
+        if config.doSendPow:
             radio.sendString(power.getData())
+        if(config.doPing and pingTimer > config.pingInterval):
+            radio.sendString("Ping")
+            pingTimer = 0
             
     def startupLightshow():
+        # All on in sequence then all off in sequence
         gpsLED.turnOn()
         clock.sleep(0.1)
         transmitLED.turnOn()
@@ -323,28 +419,35 @@ try:
         clock.sleep(0.1)
         errorLED.turnOff()
     
+    # Define all LEDs
     imbeddedLED = LED(board.GP25)
     processLED = LED(board.GP21)    
     gpsLED = LED(board.GP22)
     transmitLED = LED(board.GP20)
     receiveLED = LED(board.GP18)
     errorLED = LED(board.GP19)
+
+    # Define and initialize all onboard devices
     radio = Tranciever()
     gps = GPS()
     altimeter = Altimeter()
     imu = IMU()
     magnometer = Magnometer()
     power = Power()
-    startupLightshow()
 
+    pingTimer = 0
+
+    # Visual startup
+    startupLightshow()
     radio.sendString("Cubesat Initialized")
 
     while True:
-        processCommand()
-        sendData()
+        processCommand() # Process incoming commands
+        sendData() # Send any data that is toggled to be sent
         clock.sleep(2)
-        processLED.toggle()
-        receiveLED.turnOff()
+        processLED.toggle() # Visualize clock cycle
+        receiveLED.turnOff() # Reset recieve LED
+        pingTimer += 1 # Incriment Ping Timer
     
 except:
     radio.sendError("Critical Error Occured")

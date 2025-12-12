@@ -39,7 +39,7 @@ try:
             
             if doTextColor: print(f"{timeColor}{time} {sendTextColor}{string}{resetColor}") # print string to terminal
             else: print(f"{time} {string}")
-            
+
             with open(log_file, "a") as logFile:
                 logFile.write(time+string+"\n")  # Write content to the file
         else:
@@ -55,6 +55,7 @@ try:
         
         with open(error_file, "a") as errorFile:
             errorFile.write(time+string+"\n")  # Write content to the file
+    
     # Welcome text in terminal     
     log("", False)   
     log("---Welcome To The Groundstation---", False)
@@ -112,19 +113,23 @@ try:
             except:
                 error("Error reading data")
 
-    radio = Transciever()
+    radio = Transciever() # Define radio
     
     def runCommand(cmd):
         try:
-            Fcmd = cmd.lower().replace(" ", "")
+            Fcmd = cmd.lower().replace(" ", "") # Format Command
+            
+            # Clear the console
             if(Fcmd[0:5] == "clear"):
                 os.system('cls');
             else:
+                # Send command
                 radio.sendCommand(cmd)
         except:
             error("Error Running Command")
 
     def connectRadio():
+        # Connect radio
         while not radio.isConnected:
             radio.connect()
 
