@@ -41,7 +41,7 @@ try:
             self.doPing = False
             self.pingInterval = 1
         def loadConfig(self):
-            with open(config_file, "r") as configFile:
+            with open("/sd/Config.txt", "r") as configFile:
                 newConfig = configFile.readLines()
 
                 if(newConfig[0] is ""): return
@@ -55,15 +55,15 @@ try:
                 self.pingInterval = int(newConfig[6])
         
         def saveConfig(self):
-            with open(config_file, "w") as configFile:
+            with open("/sd/Config.txt", "w") as configFile:
                 configFile.write(
                     ("t"if self.doSendGps else"f")+"\n",
                     ("t"if self.doSendAlt else"f")+"\n",
                     ("t"if self.doSendImu else"f")+"\n",
                     ("t"if self.doSendMag else"f")+"\n",
                     ("t"if self.doSendPow else"f")+"\n",
-                    ("t"if self.doPing else"f")s+"\n",
-                    str(self.pingInterval)+"\n")
+                    ("t"if self.doPing else"f")+"\n",
+                    str(self.pingInterval))
 
             radio.sendString("Config Updated")
 
