@@ -1,5 +1,6 @@
 import board
 import busio
+import pwmio
 import storage
 import analogio
 import digitalio
@@ -22,14 +23,20 @@ try:
     # Define bord access points
     SPI1 = busio.SPI(board.GP10,MOSI=board.GP11,MISO=board.GP12)
     CS1 = digitalio.DigitalInOut(board.GP13)
-
-    sdcard = adafruit_sdcard.SDCard(SPI1,CS1)
-    vfs = storage.VfsFat(sdcard)
-    storage.mount(vfs, "/sd")
-    config_file = "config.txt"
-        
+    
     I2C0 = busio.I2C(board.GP1,board.GP0,frequency=10000)
     UART0 = busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10)
+
+    class onboardDevice:
+        def __init__(self):
+            self.isFunctional = None
+            self.boardArgs = []
+        
+        def getBoardArgs(self):
+            rString = ""
+            for i in range(0, len(self.boardArgs)):
+                rString += self.boardArgs + "\n"
+            return rString
 
     class cubesatConfig:
         def __init__(self):
@@ -40,50 +47,112 @@ try:
             self.doSendPow = False
             self.doPing = False
             self.pingInterval = 1
+            
         def loadConfig(self):
-            with open("/sd/Config.txt", "r") as configFile:
-                newConfig = configFile.readLines()
+            global sd
+            radio.sendString("Loading Config")
 
-                if(newConfig[0] is ""): return
+            if not sd.isFunctional:
+                radio.sendString("Failed To Load Config, SD Not Functional")
+                return
 
-                self.doSendGps = True if newConfig[0]=="t" else False
-                self.doSendAlt = True if newConfig[1]=="t" else False
-                self.doSendImu = True if newConfig[2]=="t" else False
-                self.doSendMag = True if newConfig[3]=="t" else False
-                self.doSendPow = True if newConfig[4]=="t" else False
-                self.doPing = True if newConfig[5]=="t" else False
-                self.pingInterval = int(newConfig[6])
+            try:
+                with open(sd.configPath, "r") as configFile:
+                    newConfig = configFile.readlines()
+
+                    if len(newConfig) == 0: 
+                        error("Config File Is Empty")
+                    else:
+                        self.doSendGps = (True if newConfig[0] is "t" else False)
+                        self.doSendAlt = (True if newConfig[1] is "t" else False)
+                        self.doSendImu = (True if newConfig[2] is "t" else False)
+                        self.doSendMag = (True if newConfig[3] is "t" else False)
+                        self.doSendPow = (True if newConfig[4] is "t" else False)
+                        self.doPing = (True if newConfig[5] is "t" else False)
+                        #self.pingInterval = int(newConfig[6])
+                        radio.sendString("Config Loaded")
+            except:
+                error("Failed To Load Configuration")
         
         def saveConfig(self):
-            with open("/sd/Config.txt", "w") as configFile:
-                configFile.write(
-                    ("t"if self.doSendGps else"f")+"\n",
-                    ("t"if self.doSendAlt else"f")+"\n",
-                    ("t"if self.doSendImu else"f")+"\n",
-                    ("t"if self.doSendMag else"f")+"\n",
-                    ("t"if self.doSendPow else"f")+"\n",
-                    ("t"if self.doPing else"f")+"\n",
-                    str(self.pingInterval))
+            
+            if not sd.isFunctional:
+                radio.sendString("Failed To Save Config, SD Not Functional")
+                return
+            
+            try:
+                with open(sd.configPath, "w") as configFile:
+                    configFile.write(
+                        ("t"if self.doSendGps else"f")+"\n"+
+                        ("t"if self.doSendAlt else"f")+"\n"+
+                        ("t"if self.doSendImu else"f")+"\n"+
+                        ("t"if self.doSendMag else"f")+"\n"+
+                        ("t"if self.doSendPow else"f")+"\n"+
+                        ("t"if self.doPing else"f")+"\n"+
+                        str(self.pingInterval))
 
-            radio.sendString("Config Updated")
-
-     # Load Data From Config
-    config = cubesatConfig()
-
-    class GPS:
+                radio.sendString("Config Updated")
+            except:
+                radio.sendString("Failed To Save Config")
+        
+    class SDCard(onboardDevice):
         def __init__(self):
             try:
+                super().__init__()
+                # Define interface
+                self.interface = adafruit_sdcard.SDCard(SPI1,CS1)
+                self.boardArgs = ["SD Card", SPI1, CS1]
+                
+                # Mount storage
+                vfs = storage.VfsFat(self.interface)  
+                storage.mount(vfs, "/sd")
+                
+                # Define file paths
+                self.configPath = "/sd/config.txt"
+                self.errorPath = "/sd/error.txt"
+                
+                # Open Files
+                with open(self.configPath, "w") as file:
+                    pass
+                with open(self.errorPath, "w") as file:
+                    pass
+
+                self.writeToFile(self.configPath, "f\nf\nf\nf\nf\n1")
+                self.isFunctional = True
+            except:
+                self.isFunctional = False
+                radio.sendString("Failed To Initialize SD Card")
+
+        def writeToFile(self, filePath, string):
+            try:
+                self.isFunctional = True
+
+                with open(filePath, "w") as writeFile:
+                    writeFile.write(string)
+            except:
+                self.isFunctional = False
+                radio.sendString("Failed To Write To SD Card")
+             
+    class GPS(onboardDevice):
+        def __init__(self):
+            try:
+                super().__init__()
                 # Define access point for GPS Data
                 self.interface = adafruit_gps.GPS(UART0,debug=False)
+                self.boardArgs = ["GPS", UART0, "Debug: False"]
                 
                 #Issues parameters to GPS
                 self.interface.send_command(b'PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0')
                 self.interface.send_command(b'PMTK220,1000')
+                self.isFunctional = True
             except:
-                radio.sendError("Failed To Setup GPS" )
+                self.isFunctional = False
+                error("Failed To Setup GPS" )
         
         def getData(self):
             try:
+                self.isFunctional = True
+                
                 # Collect data from GPS into interface object
                 self.interface.update()
 
@@ -96,66 +165,99 @@ try:
                     self.interface.satellites,
                     self.interface.horizontal_dilution)
             except:
+                self.isFunctional = False
                 return "err Failed To Send GPS Data"
 
-    class Altimeter:
+    class Altimeter(onboardDevice):
         def __init__(self):
             try:
+                super().__init__()
                 # Define access point for Altimeter Data
                 self.interface = adafruit_bme680.Adafruit_BME680_I2C(I2C0, address=0x77)
+                self.boardArgs = ["I2C", I2C0, "Address: 0x77"]
 
                 # Set default parameters for the interface
                 self.interface.sea_level_pressure = 1013.25
                 self.interface.pressure_oversampling = 8
                 self.interface.temperature_oversampling = 2
+                self.isFunctional = True
             except:
-                radio.sendError("Failed To Setup Altimeter ")
+                self.isFunctional = False
+                error("Failed To Setup Altimeter ")
         
         def getData(self):
-            # Format Altimeter data as a string
-            return "ALT {:.2f} {:.2f} {:.2f} {:.2f} {:.0f}".format(
-                self.interface.altitude,
-                self.interface.temperature,
-                self.interface.pressure,
-                self.interface.relative_humidity,
-                round(self.interface.gas))
-            
-    class IMU:
+            try:
+                self.isFunctional = True
+                
+                # Format Altimeter data as a string
+                return "ALT {:.2f} {:.2f} {:.2f} {:.2f} {:.0f}".format(
+                    self.interface.altitude,
+                    self.interface.temperature,
+                    self.interface.pressure,
+                    self.interface.relative_humidity,
+                    round(self.interface.gas))
+            except:
+                self.isFunctional = False
+                return "err Failed To Send Altimeter Data"
+                
+    class IMU(onboardDevice):
         def __init__(self):
             try:
+                super().__init__()
                 # Define access point for IMU Data
                 self.interface = LSM6DSOX(I2C0,address=0x6a)
+                self.boardArgs = [I2C0, "Address: 0x6a"]
+                self.isFunctional = True
             except:
-                radio.sendError("Failed To Setup IMU ")
+                self.isFunctional = False
+                error("Failed To Setup IMU ")
         def getData(self):
-            # Format IMU data as a string
-            return "IMU {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f}".format(
-                self.interface.acceleration[0],
-                self.interface.acceleration[1],
-                self.interface.acceleration[2],                
-                self.interface.gyro[0],
-                self.interface.gyro[1],
-                self.interface.gyro[2])
+            try:
+                self.isFunctional = True
                 
-    class Magnometer:
+                # Format IMU data as a string
+                return "IMU {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f}".format(
+                    self.interface.acceleration[0],
+                    self.interface.acceleration[1],
+                    self.interface.acceleration[2],                
+                    self.interface.gyro[0],
+                    self.interface.gyro[1],
+                    self.interface.gyro[2])
+            except:
+                self.isFunctional = False
+                return "err Failed To Send IMU Data"
+                
+    class Magnometer(onboardDevice):
         def __init__(self):
             try:
+                super().__init__()
                 # Define access point for Magnometer Data
                 self.interface = LIS3MDL(I2C0,address=0x1c)
+                self.boardArgs = [I2C0, "Address: 0x1c"]
+                self.isFunctional = True
             except:
-                radio.sendError("Failed To Setup Magnometer ")
+                self.isFunctional = False
+                error("Failed To Setup Magnometer ")
         def getData(self):
-            # Format Magnometer data as a string
-            return "MAG {:.2f} {:.2f} {:.2f}".format(
-                self.interface.magnetic[0],
-                self.interface.magnetic[1],
-                self.interface.magnetic[2])              
+            try:
+                self.isFunctional = True
                 
-    class Power:
+                # Format Magnometer data as a string
+                return "MAG {:.2f} {:.2f} {:.2f}".format(
+                    self.interface.magnetic[0],
+                    self.interface.magnetic[1],
+                    self.interface.magnetic[2])              
+            except:
+                self.isFunctional = False
+                return "err Failed To Send Magnometer Data"
+                
+    class Power(onboardDevice):
         def __init__(self):
             try:
+                super().__init__()
                 # Define access point for Power Draw Data
                 self.powerDrawInterface = INA219(I2C0,addr=0x45)
+                self.boardArgs = [I2C0, "Address: 0x45"]
 
                 # Set default parameters for the interface
                 self.powerDrawInterface.bus_adc_resolution = ADCResolution.ADCRES_12BIT_32S
@@ -169,10 +271,13 @@ try:
                 
                 # Define access point for Batery Data
                 self.batteryInterface = adafruit_max1704x.MAX17048(I2C0,address=0x36)
+                self.isFunctional = True
             except:
-                radio.sendError("Failed To Setup Power ")
+                self.isFunctional = False
+                error("Failed To Setup Power ")
         def getData(self):
             try:
+                self.isFunctional = True
                 # Format Power Data (Currently without solar)
                 return "POW {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.3f} {:.2f} {:.2f}".format(
                     self.powerDrawInterface.bus_voltage,
@@ -192,74 +297,131 @@ try:
                     self.batteryInterface.cell_voltage,
                     self.batteryInterface.cell_percent)
             except:
+                self.isFunctional = False
                 return "err Failed To Send Power Data"
 
-    class Solar:
-        def __init__(self, adress):
+    class Solar(onboardDevice):
+        def __init__(self, address):
             try:
+                super().__init__()
                 # Define access point for Solar Data
-                self.interface = INA219(I2C0,addr=adress)
+                self.interface = INA219(I2C0,addr=address)
+                self.boardArgs = [I2C0, "Address: "+address]
                 
                 # Set default parameters for the interface
                 self.interface.bus_adc_resolution = ADCResolution.ADCRES_12BIT_32S
                 self.interface.shunt_adc_resolution = ADCResolution.ADCRES_12BIT_32S
                 self.interface.bus_voltage_range = BusVoltageRange.RANGE_16V
+                self.isFunctional = True
             except:
-                radio.sendError("Failed To Setup Solar ")
+                self.isFunctional = False
+                error("Failed To Setup Solar ")
     
-    class LED:
+    class LED(onboardDevice):
         def __init__(self, boardPin):
+            try:
+                super().__init__()
                 # Define access point LED Object
-            self.boardPin = boardPin
-            self.interface = digitalio.DigitalInOut(self.boardPin)
-            self.interface.direction = digitalio.Direction.OUTPUT
-            self.value = False;
+                self.boardPin = boardPin
+                self.interface = digitalio.DigitalInOut(self.boardPin)
+                self.interface.direction = digitalio.Direction.OUTPUT
+                self.boardArgs = ["Digital IO", self.boardPin, "Direction: Out"]
+                self.value = False;
+                self.isFunctional = True
+            except:
+                self.isFunctional = False
+                error("Failed To Setup LED ")
     
         def turnOn(self):
-            self.value = True
-            self.interface.value = True
+            try:
+                self.isFunctional = True
+                self.value = True
+                self.interface.value = True
+            except:
+                self.isFunctional = False
+                error("Failed To Turn On LED ")
         
         def turnOff(self):
-            self.value = False
-            self.interface.value = False
+            try:
+                self.isFunctional = True
+                self.value = False
+                self.interface.value = False
+            except:
+                self.isFunctional = False
+                error("Failed To Turn Off LED ")
 
         def toggle(self):
-            self.value = (not self.value)
-            self.interface.value = self.value
+            try:
+                self.isFunctional = True
+                self.value = (not self.value)
+                self.interface.value = self.value
+            except:
+                self.isFunctional = False
+                error("Failed To Toggle LED ")
         
-    class Tranciever:
+    class Tranciever(onboardDevice):
         def __init__(self):
-            # Establish output Pins
-            M0 = digitalio.DigitalInOut(board.GP6)
-            M1 = digitalio.DigitalInOut(board.GP7)
-            
-            M0.direction = digitalio.Direction.OUTPUT
-            M1.direction = digitalio.Direction.OUTPUT
-            
-            M0.value = False
-            M1.value = False
-            
-            # Define access point for Tansciever
-            self.interface = busio.UART(board.GP8,board.GP9,baudrate=9600,timeout=0.1)
+            try:
+                super().__init__()
+                # Establish output Pins
+                M0 = digitalio.DigitalInOut(board.GP6)
+                M1 = digitalio.DigitalInOut(board.GP7)
+                
+                M0.direction = digitalio.Direction.OUTPUT
+                M1.direction = digitalio.Direction.OUTPUT
+                
+                M0.value = False
+                M1.value = False
+                
+                # Define access point for Tansciever
+                self.interface = busio.UART(board.GP8,board.GP9,baudrate=9600,timeout=0.1)
+                
+                self.boardArgs = ["UART", board.GP8, board.GP9, "Baudrate: 9600", "Timeout: 0.1"]
+                self.isFunctional = True
+            except:
+                self.isFunctional = False
+                error("Failed To Setup Tranciever ")
 
         def sendString(self, string):
-            self.interface.write((string+"end_msg").encode("ascii"))
-        
+            try:
+                self.isFunctional = True
+                self.interface.write((string+"end_msg").encode("ascii"))
+            except:
+                self.isFunctional = False
+                error("Failed To Send String ")
         def sendError(self, string):
-            self.interface.write(("err "+string+"end_msg").encode("ascii"))
-        
+            try:
+                self.isFunctional = True
+                self.interface.write(("err "+string+"end_msg").encode("ascii"))
+            except:
+                self.isFunctional = False
+                error("Failed To Send Error ")
         def sendBytes(self, bytes):
-            self.interface.write(bytes)
-        
+            try:
+                self.isFunctional = True
+                self.interface.write(bytes)
+            except:
+                self.isFunctional = False
+                error("Failed To Send Bytes ")
         def readIncoming(self):
-            return self.interface.read(960)
+            try:
+                self.isFunctional = True
+                return self.interface.read(960)
+            except:
+                self.isFunctional = False
+                error("Failed To Read Incoming Data ")
+    
+    def error(errorMessage):
+        sd.writeToFile(sd.errorPath, errorMessage)
+        radio.sendError(errorMessage)
+        errorLED.turnOn()
     
     def processCommand():
         # read the recieved data from the radio
         inString = str(radio.readIncoming())
         
         # if there is a command, toggle LED and continue
-        if(inString is not "None"): receiveLED.turnOn()
+        if inString is not "None": receiveLED.turnOn()
         else: return
         
         # Format string to be more default and readable
@@ -305,14 +467,14 @@ try:
                         radio.sendString(("Now" if config.doPing else "Stopped") + " Sending Ping On The Interval: "+str(config.pingInterval)+" Clock Cycles")              
                         config.saveConfig()
                     else:
-                       radio.sendError("Command Not Understood")
+                       error("Command Not Understood")
                        
-                elif inString[0:4] is "ping":
-                    config.pingInterval = int(inString[4:])
+                elif inString[0:7] is "pingint":
+                    config.pingInterval = int(inString[7:])
                     radio.sendString("Ping Interval Now: " + str(config.pingInterval) + " Clock Cycles")
                     config.saveConfig()
                 else:
-                    radio.sendError("Command Not Understood")
+                    error("Command Not Understood")
             # Toggle on or off an LED
             elif inString[0:3] is "led":
                 inString = inString[3:]
@@ -327,12 +489,11 @@ try:
                 elif inString[0:2] is "err":
                     errorLED.toggle()
                 else:
-                    radio.sendError("Command Not Understood")
+                    error("Command Not Understood")
 
             # get different data
             elif inString[0:3] is "get":
                 inString = inString[3:]
-
                 # Get whether or not a data type is being sent down
                 if inString[0:6] is "dosend":
                     inString = inString[6:]
@@ -347,7 +508,7 @@ try:
                     elif inString[0:3] is "pow":
                         radio.sendString(str(config.doSendPow))
                     else:
-                        radio.sendError("Command Not Understood")
+                        error("Command Not Understood")
                 elif inString[0:6] is "config":
                     inString = inString[6:]
                     radio.sendString(
@@ -364,22 +525,22 @@ try:
                     if inString[0:6] is "status":
                         radio.sendString("Alive")
                 else:
-                    radio.sendError("Command Not Understood")
+                    error("Command Not Understood")
             
             # Reset Cube
             elif inString[0:5] is "reset":
                 #config.saveConfig()
-                radio.sendError("Reseting...")
+                radio.sendString("Reseting...")
                 microcontroller.reset()
             
             # Toggle lightshow
             elif inString[0:9] is "runlights":
                 startupLightshow()
             else:
-                radio.sendError("Command Not Understood")
+                error("Command Not Understood")
             
         except:
-            radio.sendError("Failed To Interpret Command")        
+            error("Failed To Interpret Command")        
         
     def sendData():
         # Check which types of data should be send down
@@ -393,7 +554,7 @@ try:
             radio.sendString(magnometer.getData())
         if config.doSendPow:
             radio.sendString(power.getData())
-        if(config.doPing and pingTimer > config.pingInterval):
+        if config.doPing and pingTimer >= config.pingInterval:
             radio.sendString("Ping")
             pingTimer = 0
             
@@ -433,8 +594,13 @@ try:
     altimeter = Altimeter()
     imu = IMU()
     magnometer = Magnometer()
-    power = Power()
-
+    #power = Power()
+    sd = SDCard()
+    # Load Data From Config
+    config = cubesatConfig()
+    config.loadConfig()
+    
+    clockTimer = 1
     pingTimer = 0
 
     # Visual startup
@@ -442,13 +608,13 @@ try:
     radio.sendString("Cubesat Initialized")
 
     while True:
-        processCommand() # Process incoming commands
-        sendData() # Send any data that is toggled to be sent
-        clock.sleep(2)
-        processLED.toggle() # Visualize clock cycle
-        receiveLED.turnOff() # Reset recieve LED
-        pingTimer += 1 # Incriment Ping Timer
+        if (clock.monotonic()%clockTimer) == 0:
+            processCommand() # Process incoming commands
+            sendData() # Send any data that is toggled to be sent
+            processLED.toggle() # Visualize clock cycle
+            receiveLED.turnOff() # Reset recieve LED
+            errorLED.turnOff() # Reset error LED
+            pingTimer += 1 # Incriment Ping Timer
     
 except:
-    radio.sendError("Critical Error Occured")
-    print("Critical Error Occured")
+    error("Critical Error Occured")
