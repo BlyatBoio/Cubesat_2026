@@ -466,6 +466,9 @@ try:
                         config.doPing = value
                         radio.sendString(("Now" if config.doPing else "Stopped") + " Sending Ping On The Interval: "+str(config.pingInterval)+" Clock Cycles")              
                         config.saveConfig()
+                    elif inString[0:3] is "all":
+                        config.saveConfig()
+
                     else:
                        error("Command Not Understood")
                        
@@ -603,11 +606,43 @@ try:
     clockTimer = 1
     pingTimer = 0
 
+    angleX = 0
+    angleY = 0
+    angleZ = 0
+    
     # Visual startup
     startupLightshow()
     radio.sendString("Cubesat Initialized")
 
     while True:
+        if (clock.monotonic()%0.5) == 0:
+            errorLED.turnOn()
+            
+            if abs(imu.interface.gyro[0]) > 0.05: angleX += imu.interface.gyro[0]
+            if abs(imu.interface.gyro[1]) > 0.05: angleY += imu.interface.gyro[1]
+            if abs(imu.interface.gyro[2]) > 0.05: angleZ += imu.interface.gyro[2]
+
+            if angleX > 6.28: angleX -= 6.28
+            if angleY > 6.28: angleY -= 6.28
+            if angleZ > 6.28: angleZ -= 6.28
+
+            if angleX < 0: angleX = 6.28
+            if angleY < 0: angleY = 6.28
+            if angleZ < 0: angleZ = 6.28
+
+            testAngle = angleZ
+
+            if testAngle >= 0: gpsLED.turnOn()
+            else: gpsLED.turnOff()
+            if testAngle >= 2.1: transmitLED.turnOn()
+            else: transmitLED.turnOff()
+            if testAngle >= 4.2: receiveLED.turnOn()
+            else: receiveLED.turnOff()
+
+            if (clock.monotonic()%0.5) == 0: 
+                radio.sendString(str(testAngle))
+            
+            errorLED.turnOff()
         if (clock.monotonic()%clockTimer) == 0:
             processCommand() # Process incoming commands
             sendData() # Send any data that is toggled to be sent
@@ -615,6 +650,5 @@ try:
             receiveLED.turnOff() # Reset recieve LED
             errorLED.turnOff() # Reset error LED
             pingTimer += 1 # Incriment Ping Timer
-    
 except:
     error("Critical Error Occured")
