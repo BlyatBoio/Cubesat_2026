@@ -6,7 +6,9 @@ from PyQt5 import uic
 from PyQt5 import QtGui
 from PyQt5 import QtCore
 from datetime import datetime
+from guiThreading import *
 import serial.tools.list_ports
+import traceback
 
 import threading
 
@@ -39,7 +41,7 @@ try:
             
             if doTextColor: print(f"{timeColor}{time} {sendTextColor}{string}{resetColor}") # print string to terminal
             else: print(f"{time} {string}")
-
+            
             with open(log_file, "a") as logFile:
                 logFile.write(time+string+"\n")  # Write content to the file
         else:
@@ -55,7 +57,6 @@ try:
         
         with open(error_file, "a") as errorFile:
             errorFile.write(time+string+"\n")  # Write content to the file
-    
     # Welcome text in terminal     
     log("", False)   
     log("---Welcome To The Groundstation---", False)
@@ -89,6 +90,7 @@ try:
                 if port is not None:
                     # If a port was assigned, assign it to the Serial device
                     self.serial = serial.Serial(str(port), 9600, timeout=0.5, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
+                    self.serial.flush()
                     log("Assigned Port: " + str(port) + "\n")
                     self.port = port
                     self.isConnected = True
@@ -109,27 +111,23 @@ try:
                 
         def readData(self):
             try:
-                return self.serial.read(960)
+                return self.serial.read(self.serial.in_waiting)
             except:
                 error("Error reading data")
 
-    radio = Transciever() # Define radio
+    radio = Transciever()
     
     def runCommand(cmd):
         try:
-            Fcmd = cmd.lower().replace(" ", "") # Format Command
-            
-            # Clear the console
+            Fcmd = cmd.lower().replace(" ", "")
             if(Fcmd[0:5] == "clear"):
                 os.system('cls');
             else:
-                # Send command
                 radio.sendCommand(cmd)
         except:
             error("Error Running Command")
 
     def connectRadio():
-        # Connect radio
         while not radio.isConnected:
             radio.connect()
 
@@ -140,15 +138,15 @@ try:
 
     def runRadioReciever():
         while True:
-            packet = str(radio.serial.read(960).decode("ascii"))
-            if packet != "": 
+            packet = str(radio.serial.read(radio.serial.in_waiting).decode("ascii"))
+            if len(packet) > 1 and packet != "": 
                 packets = packet.split("end_msg")
                 for p in packets :
                     if p != "":
                         p = decodeData(p)
                         if "ERROR" not in p: log(f"{timeColor}Recieved: {inTextColor}{p}")
                         else: error("Recieved " + p)
-            clock.sleep(1)
+            clock.sleep(0.1)
     
     def decodeData(packet):
         try:
@@ -238,6 +236,25 @@ try:
     commandRunnerThread.start()
     radioInputThread.start()
     log("Started Threads")
+    
+    class UI(QMainWindow):
+        def __init__(self):
+            super(UI, self).__init__()
+            
+            uic.loadUi("large.ui", self)
+            
+            self.gpsOut = self.findChild(QTextEdit, "GPS_Out")     
+            self.terminalIn = self.findChild(QTextEdit, "Terminal_In")     
+            # set the title
+            self.setWindowTitle("Ground Station")
+            # Show the Application
+            self.show()
 
-except:
-    error("Critical Error")
+    #app = QApplication(sys.argv)
+    #UIWindow = UI()
+    #app.exec_()
+            
+
+except Exception as e:
+    error("Critical Error:")
+    traceback.print_exception(type(e), e, e.__traceback__)
