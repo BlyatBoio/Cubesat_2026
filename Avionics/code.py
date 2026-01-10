@@ -1,6 +1,7 @@
 import board
 import busio
 import pwmio
+import math
 import storage
 import analogio
 import digitalio
@@ -23,6 +24,9 @@ try:
     # Define bord access points
     SPI1 = busio.SPI(board.GP10,MOSI=board.GP11,MISO=board.GP12)
     CS1 = digitalio.DigitalInOut(board.GP13)
+
+    PWM0 = pwmio.PWMOut(board.GP27, frequency=48000, duty_cycle=0, variable_frequency=True)
+    MAX_RPM = 60
     
     I2C0 = busio.I2C(board.GP1,board.GP0,frequency=10000)
     UART0 = busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10)
@@ -110,11 +114,14 @@ try:
                 # Define file paths
                 self.configPath = "/sd/config.txt"
                 self.errorPath = "/sd/error.txt"
+                self.dataPath = "/sd/data.txt"
                 
                 # Open Files
                 with open(self.configPath, "w") as file:
                     pass
                 with open(self.errorPath, "w") as file:
+                    pass
+                with open(self.dataPath, "w") as file:
                     pass
 
                 self.writeToFile(self.configPath, "f\nf\nf\nf\nf\n1")
@@ -410,15 +417,71 @@ try:
             except:
                 self.isFunctional = False
                 error("Failed To Read Incoming Data ")
-    
+
+    class FlywheelMotor(onboardDevice):
+        def __init__(self):
+            self.interface = PWM0
+
+        def spinClockwise(self, percentThrotle):
+            # 0.1 ms = 0% throttle 0.2 ms = 100% throttle
+            self.interface.frequency = 0.15+(percentThrotle / 100)/20
+
+        def spinCounterClockwise(self, percentThrotle):
+            # 0.1 ms = 1000%  reverse throttle 0.2 ms = 100% throttle
+            self.interface.frequency = 0.15-(percentThrotle / 100)/20
+        
+    #class rotationalControlSystem():
+        #def __init__(self):
+            # TEMP
+        
+    class commandSequence:
+        def __init__(self, commands=[]):
+            self.commands = commands
+            self.isRunning = False
+        
+        def addCommand(self, command):
+            self.commands.append(command)
+        
+        def removeLastCommand(self):
+            if len(self.commands > 0):
+                self.commands.pop()
+
+        def removeCommandAtIndex(self, index):
+            if self.commands[index] != None:
+                self.commands.pop(index)
+            else:
+                error("Index Of Command Out Of Bounds")
+
+        def runLastCommand(self):
+            if len(self.commands > 0):
+                processCommand(self.commands[len(self.commands) - 1])
+
+        def runCommandAtIndex(self, index):
+            if index < len(self.commands):
+                processCommand(self.commands[index])
+            else:
+                error("Index Of Command Out Of Bounds")
+
+        def start(self):
+            self.isRunning = True
+
+        def cancel(self):
+            self.isRunning = False
+
     def error(errorMessage):
         sd.writeToFile(sd.errorPath, errorMessage)
         radio.sendError(errorMessage)
         errorLED.turnOn()
     
-    def processCommand():
-        # read the recieved data from the radio
-        inString = str(radio.readIncoming())
+    def saveValue(label, value):
+        if sd.isFunctional: 
+            sd.writeToFile(sd.dataPath, label + ": " + value)
+        else:
+            error("SD Is Not Functional, Could Not Save Value")
+
+    def processCommand(inString):
+        # read the recieved data from the radio by default
+        # allow for user to pass in a string to process
         
         # if there is a command, toggle LED and continue
         if inString is not "None": receiveLED.turnOn()
@@ -493,7 +556,6 @@ try:
                     errorLED.toggle()
                 else:
                     error("Command Not Understood")
-
             # get different data
             elif inString[0:3] is "get":
                 inString = inString[3:]
@@ -522,6 +584,20 @@ try:
                         "Send Pow:"+str(config.doSendPow)+"\n"+
                         "Send Ping:"+str(config.doPing)+"\n"+
                         "Ping Interval:"+str(config.pingInterval)+"\n")
+                elif inString[0:4] is "data":
+                    inString = inString[4:]
+                    if inString[0:3] is "gps":
+                        radio.sendString(str(gps.getData()))
+                    elif inString[0:3] is "alt":
+                        radio.sendString(str(altimeter.getData()))
+                    elif inString[0:3] is "imu":
+                        radio.sendString(str(imu.getData()))
+                    elif inString[0:3] is "mag":
+                        radio.sendString(str(magnometer.getData()))
+                    elif inString[0:3] is "pow":
+                        radio.sendString(str(power.getData()))
+                    else:
+                        error("Command Not Understood")
                 # Similar to ping but funner to type
                 elif inString[0:4] is "cube":
                     inString = inString[4:]
@@ -530,6 +606,24 @@ try:
                 else:
                     error("Command Not Understood")
             
+            elif inString[0:4] is "save":
+                inString = inString[4:]
+                if inString[0:3] is "gps":
+                    saveValue("GPS Save", str(gps.getData()))
+                elif inString[0:3] is "alt":
+                    saveValue("Altimeter Save", str(altimeter.getData()))
+                elif inString[0:3] is "imu":
+                    saveValue("IMU Save", str(imu.getData()))
+                elif inString[0:3] is "mag":
+                    saveValue("Magnometer Save", str(magnometer.getData()))
+                elif inString[0:3] is "pow":
+                    saveValue("Power Save", str(power.getData()))
+                else:
+                    error("Command Not Understood")
+            
+            #elif inString[0:6] is "rotate":
+                # PLACEHOLDER 
+
             # Reset Cube
             elif inString[0:5] is "reset":
                 #config.saveConfig()
@@ -598,53 +692,27 @@ try:
     imu = IMU()
     magnometer = Magnometer()
     #power = Power()
+    flywheel = FlywheelMotor()
     sd = SDCard()
     # Load Data From Config
     config = cubesatConfig()
     config.loadConfig()
-    
-    clockTimer = 1
-    pingTimer = 0
 
-    angleX = 0
-    angleY = 0
-    angleZ = 0
-    
+    # Instantiate current command sequence as an empty command sequence
+    currentCommandSequence = commandSequence()
+
+    # Timing Intervals
+    clockTimer = 2
+    pingTimer = 1
+
     # Visual startup
     startupLightshow()
     radio.sendString("Cubesat Initialized")
 
     while True:
-        if (clock.monotonic()%0.5) == 0:
-            errorLED.turnOn()
-            
-            if abs(imu.interface.gyro[0]) > 0.05: angleX += imu.interface.gyro[0]
-            if abs(imu.interface.gyro[1]) > 0.05: angleY += imu.interface.gyro[1]
-            if abs(imu.interface.gyro[2]) > 0.05: angleZ += imu.interface.gyro[2]
-
-            if angleX > 6.28: angleX -= 6.28
-            if angleY > 6.28: angleY -= 6.28
-            if angleZ > 6.28: angleZ -= 6.28
-
-            if angleX < 0: angleX = 6.28
-            if angleY < 0: angleY = 6.28
-            if angleZ < 0: angleZ = 6.28
-
-            testAngle = angleZ
-
-            if testAngle >= 0: gpsLED.turnOn()
-            else: gpsLED.turnOff()
-            if testAngle >= 2.1: transmitLED.turnOn()
-            else: transmitLED.turnOff()
-            if testAngle >= 4.2: receiveLED.turnOn()
-            else: receiveLED.turnOff()
-
-            if (clock.monotonic()%0.5) == 0: 
-                radio.sendString(str(testAngle))
-            
-            errorLED.turnOff()
-        if (clock.monotonic()%clockTimer) == 0:
-            processCommand() # Process incoming commands
+        
+        if abs(clock.monotonic()%clockTimer) == 0:
+            processCommand(str(radio.readIncoming())) # Process incoming commands
             sendData() # Send any data that is toggled to be sent
             processLED.toggle() # Visualize clock cycle
             receiveLED.turnOff() # Reset recieve LED
