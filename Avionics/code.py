@@ -595,7 +595,7 @@ try:
                     
                 self.hasStarted = True
                 # Every frame it runs, re-check the command's finished condition
-                self.isFinished = eval(self.finishedCondition)
+                self.isFinished = self.finishedCondition()
                 
                 if self.isFinished:
                     self.hasStarted = False
@@ -621,7 +621,7 @@ try:
         if inString is not "None": receiveLED.turnOn()
         else: return
         
-        commandCompleteCase = True
+        commandCompleteCase = lambda: True
         
         # Format string to be more default and readable
         inString = inString.lower()
@@ -761,6 +761,7 @@ try:
                 degreesToRotate = float(inString[6:])
                 rotationSystem.startRotation(degreesToRotate)
                 radio.sendString("Rotating "+str(degreesToRotate)+" Degrees")
+                commandCompleteCase = lambda: not rotationSystem.isRotating
 
             elif inString[0:4] is "wait":
                 waitTime = int(inString[4:])
@@ -782,7 +783,6 @@ try:
         except:
             error("Failed To Interpret Command")  
             return True # Returning false would lead to commands getting stuck in a loop 
-                 
        
     """Send data based on config toggles""" 
     def sendData():
