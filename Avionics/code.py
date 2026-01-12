@@ -26,24 +26,27 @@ try:
     CS1 = digitalio.DigitalInOut(board.GP13)
 
     PWM0 = pwmio.PWMOut(board.GP27, frequency=48000, duty_cycle=0, variable_frequency=True)
-    MAX_RPM = 60
     
     I2C0 = busio.I2C(board.GP1,board.GP0,frequency=10000)
     UART0 = busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10)
-
+    
+    """Simple parent class handling onboard devices"""
     class onboardDevice:
         def __init__(self):
-            self.isFunctional = None
+            self.isFunctional = None # Set manually case by case in each class
             self.boardArgs = []
         
+        """Get a string representation of the arguments passed to the device"""
         def getBoardArgs(self):
             rString = ""
             for i in range(0, len(self.boardArgs)):
                 rString += self.boardArgs + "\n"
             return rString
 
+    """Class To Store, Load and Save Config Data"""
     class cubesatConfig:
         def __init__(self):
+            # Define default config values
             self.doSendGps = False
             self.doSendAlt = False
             self.doSendImu = False
@@ -52,6 +55,7 @@ try:
             self.doPing = False
             self.pingInterval = 1
             
+        """Load Config From SD Card"""
         def loadConfig(self):
             global sd
             radio.sendString("Loading Config")
@@ -64,6 +68,8 @@ try:
                 with open(sd.configPath, "r") as configFile:
                     newConfig = configFile.readlines()
 
+                    # Each line is an index up,
+                    # Each line has either t or f representing true or fase
                     if len(newConfig) == 0: 
                         error("Config File Is Empty")
                     else:
@@ -78,12 +84,14 @@ try:
             except:
                 error("Failed To Load Configuration")
         
+        """Save Config To SD Card"""
         def saveConfig(self):
             
             if not sd.isFunctional:
                 radio.sendString("Failed To Save Config, SD Not Functional")
                 return
             
+            # Sepparate each line by \n so .readLines can sepparate each value easily
             try:
                 with open(sd.configPath, "w") as configFile:
                     configFile.write(
@@ -99,6 +107,7 @@ try:
             except:
                 radio.sendString("Failed To Save Config")
         
+    """Interface class for the SD Card"""
     class SDCard(onboardDevice):
         def __init__(self):
             try:
@@ -124,15 +133,20 @@ try:
                 with open(self.dataPath, "w") as file:
                     pass
 
+                # Write default config to config file
                 self.writeToFile(self.configPath, "f\nf\nf\nf\nf\n1")
                 self.isFunctional = True
             except:
                 self.isFunctional = False
                 radio.sendString("Failed To Initialize SD Card")
 
+        """Write a string to a file on the SD Card
+            FilePath: Path to file on SD Card
+            String: String to write to file
+        """
         def writeToFile(self, filePath, string):
             try:
-                self.isFunctional = True
+                self.isFunctional = True # If it cant write a file, this value will be reset to false
 
                 with open(filePath, "w") as writeFile:
                     writeFile.write(string)
@@ -140,6 +154,7 @@ try:
                 self.isFunctional = False
                 radio.sendString("Failed To Write To SD Card")
              
+    """Interface class for the GPS"""
     class GPS(onboardDevice):
         def __init__(self):
             try:
@@ -156,6 +171,7 @@ try:
                 self.isFunctional = False
                 error("Failed To Setup GPS" )
         
+        """Get data from the GPS formatted as for the groundstation"""
         def getData(self):
             try:
                 self.isFunctional = True
@@ -175,6 +191,7 @@ try:
                 self.isFunctional = False
                 return "err Failed To Send GPS Data"
 
+    """Interface class for the Altimeter"""
     class Altimeter(onboardDevice):
         def __init__(self):
             try:
@@ -192,6 +209,7 @@ try:
                 self.isFunctional = False
                 error("Failed To Setup Altimeter ")
         
+        """Get data from the Altimeter formatted as for the groundstation"""
         def getData(self):
             try:
                 self.isFunctional = True
@@ -207,6 +225,7 @@ try:
                 self.isFunctional = False
                 return "err Failed To Send Altimeter Data"
                 
+    """Interface class for the IMU"""
     class IMU(onboardDevice):
         def __init__(self):
             try:
@@ -218,6 +237,8 @@ try:
             except:
                 self.isFunctional = False
                 error("Failed To Setup IMU ")
+
+        """Get data from the IMU formatted as for the groundstation"""
         def getData(self):
             try:
                 self.isFunctional = True
@@ -234,6 +255,7 @@ try:
                 self.isFunctional = False
                 return "err Failed To Send IMU Data"
                 
+    """Interface class for the Magnometer"""
     class Magnometer(onboardDevice):
         def __init__(self):
             try:
@@ -245,6 +267,8 @@ try:
             except:
                 self.isFunctional = False
                 error("Failed To Setup Magnometer ")
+        
+        """Get data from the Magnometer formatted as for the groundstation"""
         def getData(self):
             try:
                 self.isFunctional = True
@@ -258,6 +282,7 @@ try:
                 self.isFunctional = False
                 return "err Failed To Send Magnometer Data"
                 
+    """Interface class for the Power"""
     class Power(onboardDevice):
         def __init__(self):
             try:
@@ -282,6 +307,8 @@ try:
             except:
                 self.isFunctional = False
                 error("Failed To Setup Power ")
+        
+        """Get data from the Power formatted as for the groundstation"""
         def getData(self):
             try:
                 self.isFunctional = True
@@ -307,6 +334,7 @@ try:
                 self.isFunctional = False
                 return "err Failed To Send Power Data"
 
+    """Interface class for the Solar"""
     class Solar(onboardDevice):
         def __init__(self, address):
             try:
@@ -324,6 +352,7 @@ try:
                 self.isFunctional = False
                 error("Failed To Setup Solar ")
     
+    """Interface class for the LEDS"""
     class LED(onboardDevice):
         def __init__(self, boardPin):
             try:
@@ -339,6 +368,7 @@ try:
                 self.isFunctional = False
                 error("Failed To Setup LED ")
     
+        """Turn On the LED"""
         def turnOn(self):
             try:
                 self.isFunctional = True
@@ -348,6 +378,7 @@ try:
                 self.isFunctional = False
                 error("Failed To Turn On LED ")
         
+        """Turn Off the LED"""
         def turnOff(self):
             try:
                 self.isFunctional = True
@@ -357,6 +388,7 @@ try:
                 self.isFunctional = False
                 error("Failed To Turn Off LED ")
 
+        """Toggle the LED"""
         def toggle(self):
             try:
                 self.isFunctional = True
@@ -366,6 +398,7 @@ try:
                 self.isFunctional = False
                 error("Failed To Toggle LED ")
         
+    """Interface class for the Tranciever"""
     class Tranciever(onboardDevice):
         def __init__(self):
             try:
@@ -389,6 +422,7 @@ try:
                 self.isFunctional = False
                 error("Failed To Setup Tranciever ")
 
+        """Send a string via the Tranciever"""
         def sendString(self, string):
             try:
                 self.isFunctional = True
@@ -396,6 +430,8 @@ try:
             except:
                 self.isFunctional = False
                 error("Failed To Send String ")
+                
+        """Send an error string via the Tranciever"""
         def sendError(self, string):
             try:
                 self.isFunctional = True
@@ -403,6 +439,8 @@ try:
             except:
                 self.isFunctional = False
                 error("Failed To Send Error ")
+        
+        """Send bytes via the Tranciever"""
         def sendBytes(self, bytes):
             try:
                 self.isFunctional = True
@@ -410,6 +448,8 @@ try:
             except:
                 self.isFunctional = False
                 error("Failed To Send Bytes ")
+                
+        """Read incoming data from the Tranciever"""
         def readIncoming(self):
             try:
                 self.isFunctional = True
@@ -418,67 +458,136 @@ try:
                 self.isFunctional = False
                 error("Failed To Read Incoming Data ")
 
+    """Interface class for the Flywheel Motor"""
     class FlywheelMotor(onboardDevice):
         def __init__(self):
-            self.interface = PWM0
 
+            super().__init__()
+            # Define access point for Flywheel Motor
+            self.interface = PWM0
+            self.boardArgs = ["PWM", board.GP27, "frequency: 48000", "duty_cycle: 0", "variable_frequency: True"]
+            self.brakeMode = False
+
+        """Spin the flywheel clockwise at a percent throttle"""
         def spinClockwise(self, percentThrotle):
-            # 0.1 ms = 0% throttle 0.2 ms = 100% throttle
+            # 0.1 ms = 100% reverse throttle 0.2 ms = 100% throttle fwd
             self.interface.frequency = 0.15+(percentThrotle / 100)/20
 
+        """Spin the flywheel counterClockwise at a percent throttle"""
         def spinCounterClockwise(self, percentThrotle):
-            # 0.1 ms = 1000%  reverse throttle 0.2 ms = 100% throttle
+            # 0.1 ms = 100% reverse throttle 0.2 ms = 100% throttle fwd
             self.interface.frequency = 0.15-(percentThrotle / 100)/20
+            
+        """Set the brake mode of the flywheel motor"""
+        def setBrakeMode(self, value):
+            self.brakeMode = value
+            if self.brakeMode:
+                self.interface.frequency = 0.2            
         
-    #class rotationalControlSystem():
-        #def __init__(self):
-            # TEMP
+    """Helper class to control rotation of the cubesat"""
+    class rotationControlSystem:
+        def __init__(self):
+            self.isRotating = False
+            self.rotatedDegrees = 0
+            self.degreesToRotate = 0
+            
+        """Start rotating the cubesat a certain number of degrees"""
+        def startRotation(self, degreesToRotate):
+            # Reset rotation tracking variables
+            self.isRotating = True
+            self.rotatedDegrees = 0
+            flywheel.setBrakeMode(False)
+            # Set target rotation
+            self.degreesToRotate = degreesToRotate
         
+        """Stop rotating the cubesat"""
+        def stopRotation(self):
+            self.isRotating = False
+            flywheel.setBrakeMode(True)
+        
+        """Run rotation control loop, should be called in main loop"""
+        def runRotation(self):
+            if self.isRotating:
+                # Gyro gives radians, convert to degrees
+                self.rotatedDegrees += 3.14 * (imu.interface.gyro[2]) / 180
+                
+                if self.rotatedDegrees >= self.degreesToRotate:
+                    self.stopRotation()
+                else:
+                    # Handle directionality
+                    if self.degreesToRotate > 0:
+                        # (100% - percent completed) = percent throttle
+                        flywheel.spinClockwise(((self.degreesToRotate - self.rotatedDegrees) / self.degreesToRotate) * 100)
+                    else:
+                        # (100% - percent completed) = percent throttle
+                        flywheel.spinCounterClockwise(((abs(self.degreesToRotate) - abs(self.rotatedDegrees)) / abs(self.degreesToRotate)) * 100)
+                
     class commandSequence:
         def __init__(self, commands=[]):
             self.commands = commands
             self.isRunning = False
+            self.currentCommandIndex = 0
         
+        """Add a command to the end of the sequence"""
         def addCommand(self, command):
             self.commands.append(command)
         
+        """Remove the last command added"""
         def removeLastCommand(self):
             if len(self.commands > 0):
                 self.commands.pop()
-
+                
+        """Remove a command at a specific index"""
         def removeCommandAtIndex(self, index):
             if self.commands[index] != None:
                 self.commands.pop(index)
             else:
                 error("Index Of Command Out Of Bounds")
 
+        """Run the last command added"""
         def runLastCommand(self):
             if len(self.commands > 0):
                 processCommand(self.commands[len(self.commands) - 1])
 
+        """Run a command at a specific index"""
         def runCommandAtIndex(self, index):
             if index < len(self.commands):
                 processCommand(self.commands[index])
             else:
                 error("Index Of Command Out Of Bounds")
 
+        """Run the command sequence, should be called in main loop"""
+        def runCommandSequence(self):
+            if self.isRunning and self.currentCommandIndex < len(self.commands):
+                # Process the current command
+                processCommand(self.commands[self.currentCommandIndex])
+                self.currentCommandIndex += 1
+            else:
+                self.isRunning = False
+                self.currentCommandIndex = 0
+
+        """Start the command sequence"""
         def start(self):
             self.isRunning = True
 
+        """Cancel the command sequence"""
         def cancel(self):
             self.isRunning = False
 
+    """Send an error via radio and log it to the SD Card"""
     def error(errorMessage):
         sd.writeToFile(sd.errorPath, errorMessage)
         radio.sendError(errorMessage)
         errorLED.turnOn()
     
+    """Save a value to the SD Card"""
     def saveValue(label, value):
         if sd.isFunctional: 
             sd.writeToFile(sd.dataPath, label + ": " + value)
         else:
             error("SD Is Not Functional, Could Not Save Value")
 
+    """Process a command string incoming or internally generated"""
     def processCommand(inString):
         # read the recieved data from the radio by default
         # allow for user to pass in a string to process
@@ -621,8 +730,14 @@ try:
                 else:
                     error("Command Not Understood")
             
-            #elif inString[0:6] is "rotate":
-                # PLACEHOLDER 
+            elif inString[0:6] is "rotate":
+                degreesToRotate = float(inString[6:])
+                rotationSystem.startRotation(degreesToRotate)
+                radio.sendString("Rotating "+str(degreesToRotate)+" Degrees")
+
+            elif inString[0:4] is "wait":
+                waitTime = int(inString[4:])
+                clock.sleep(waitTime)
 
             # Reset Cube
             elif inString[0:5] is "reset":
@@ -638,7 +753,8 @@ try:
             
         except:
             error("Failed To Interpret Command")        
-        
+       
+    """Send data based on config toggles""" 
     def sendData():
         # Check which types of data should be send down
         if config.doSendGps:
@@ -655,6 +771,7 @@ try:
             radio.sendString("Ping")
             pingTimer = 0
             
+    """Visual startup lightshow"""
     def startupLightshow():
         # All on in sequence then all off in sequence
         gpsLED.turnOn()
@@ -693,6 +810,7 @@ try:
     magnometer = Magnometer()
     #power = Power()
     flywheel = FlywheelMotor()
+    rotationSystem = rotationControlSystem()
     sd = SDCard()
     # Load Data From Config
     config = cubesatConfig()
