@@ -22,13 +22,13 @@ from adafruit_ina219 import ADCResolution, BusVoltageRange, INA219
 
 try:
     # Define bord access points
-    SPI1 = busio.SPI(board.GP10,MOSI=board.GP11,MISO=board.GP12)
-    CS1 = digitalio.DigitalInOut(board.GP13)
+    SPI1 = busio.SPI(board.GP10,MOSI=board.GP11,MISO=board.GP12) # SD Card
+    CS1 = digitalio.DigitalInOut(board.GP13) # SD Card Chip Select
 
-    PWM0 = pwmio.PWMOut(board.GP27, frequency=48000, duty_cycle=0, variable_frequency=True)
+    PWM0 = pwmio.PWMOut(board.GP27, frequency=48000, duty_cycle=0, variable_frequency=True) # Motor PWM
     
-    I2C0 = busio.I2C(board.GP1,board.GP0,frequency=10000)
-    UART0 = busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10)
+    I2C0 = busio.I2C(board.GP1,board.GP0,frequency=10000) # Altimeter, IMU, Magnometer, Power, Solar, Battery
+    UART0 = busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10) # GPS
     
     """Simple parent class handling onboard devices"""
     class onboardDevice:
@@ -522,6 +522,7 @@ try:
                         # (100% - percent completed) = percent throttle
                         flywheel.spinCounterClockwise(((abs(self.degreesToRotate) - abs(self.rotatedDegrees)) / abs(self.degreesToRotate)) * 100)
                 
+    """Class meant to handle the execution of a sequence of commands"""
     class commandSequence:
         def __init__(self, commands=[]):
             self.commands = commands
@@ -547,12 +548,12 @@ try:
         """Run the last command added"""
         def runLastCommand(self):
             if len(self.commands > 0):
-                processCommand(self.commands[len(self.commands) - 1])
+                self.commands[len(self.commands) - 1].run()
 
         """Run a command at a specific index"""
         def runCommandAtIndex(self, index):
             if index < len(self.commands):
-                processCommand(self.commands[index])
+                self.commands[index].run()
             else:
                 error("Index Of Command Out Of Bounds")
 
@@ -560,8 +561,9 @@ try:
         def runCommandSequence(self):
             if self.isRunning and self.currentCommandIndex < len(self.commands):
                 # Process the current command
-                processCommand(self.commands[self.currentCommandIndex])
-                self.currentCommandIndex += 1
+                self.commands[self.currentCommandIndex].run()
+                if self.commands[self.currentCommandIndex].isFinished:
+                    self.currentCommandIndex += 1
             else:
                 self.isRunning = False
                 self.currentCommandIndex = 0
@@ -574,6 +576,30 @@ try:
         def cancel(self):
             self.isRunning = False
 
+    """Class meant to handle the definition and execution of a single command
+        commandString: String passed into ProcessCommand()
+    """
+    class command:
+        def __init__(self, commandString):
+            self.commandString = commandString # String passed into ProcessCommand
+            self.isFinished = False
+            self.finishedCondition = None
+            self.hasStarted = False
+        
+        """Run the command, should be called in main loop"""
+        def run(self):
+            if not self.isFinished:
+                # First frame of running, process the command
+                if not self.hasStarted:
+                    self.finishedCondition = processCommand(self.commandString)
+                    
+                self.hasStarted = True
+                # Every frame it runs, re-check the command's finished condition
+                self.isFinished = eval(self.finishedCondition)
+                
+                if self.isFinished:
+                    self.hasStarted = False
+    
     """Send an error via radio and log it to the SD Card"""
     def error(errorMessage):
         sd.writeToFile(sd.errorPath, errorMessage)
@@ -592,9 +618,10 @@ try:
         # read the recieved data from the radio by default
         # allow for user to pass in a string to process
         
-        # if there is a command, toggle LED and continue
         if inString is not "None": receiveLED.turnOn()
         else: return
+        
+        commandCompleteCase = True
         
         # Format string to be more default and readable
         inString = inString.lower()
@@ -751,8 +778,11 @@ try:
             else:
                 error("Command Not Understood")
             
+            return commandCompleteCase
         except:
-            error("Failed To Interpret Command")        
+            error("Failed To Interpret Command")  
+            return True # Returning false would lead to commands getting stuck in a loop 
+                 
        
     """Send data based on config toggles""" 
     def sendData():
