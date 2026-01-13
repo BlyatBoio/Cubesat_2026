@@ -579,7 +579,7 @@ try:
     """Class meant to handle the definition and execution of a single command
         commandString: String passed into ProcessCommand()
     """
-    class command:
+    class Command:
         def __init__(self, commandString):
             self.commandString = commandString # String passed into ProcessCommand
             self.isFinished = False
@@ -600,6 +600,15 @@ try:
                 if self.isFinished:
                     self.hasStarted = False
     
+    """Helper class to create commands"""
+    class commandCreator:
+        """Create a wait command"""
+        def getWaitCommand(timeInSeconds):
+            return Command("wait"+timeInSeconds)
+        
+        def getRotationCommand(degreesToRotate):
+            return Command("rotate"+degreesToRotate) 
+        
     """Send an error via radio and log it to the SD Card"""
     def error(errorMessage):
         sd.writeToFile(sd.errorPath, errorMessage)
