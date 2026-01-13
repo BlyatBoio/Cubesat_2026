@@ -522,7 +522,7 @@ try:
                         # (100% - percent completed) = percent throttle
                         flywheel.spinCounterClockwise(((abs(self.degreesToRotate) - abs(self.rotatedDegrees)) / abs(self.degreesToRotate)) * 100)
                 
-    """Class meant to handle the execution of a sequence of commands"""
+    """Class to handle the execution of a sequence of commands"""
     class commandSequence:
         def __init__(self, commands=[]):
             self.commands = commands
@@ -570,25 +570,92 @@ try:
 
         """Start the command sequence"""
         def start(self):
+            runningCommandSequences.append(self)
             self.isRunning = True
 
         """Cancel the command sequence"""
         def cancel(self):
+            runningCommandSequences.remove(self)
             self.isRunning = False
 
+    """Class to handle the execution of a parallel sequence of commands"""
+    class parallelCommandSequence:
+        def __init__(self, commands=[], endCondition=2):
+            RACE = 1
+            LAST = 2
+            self.commands = commands
+            self.endCondition = endCondition
+            self.isRunning = False
+            self.isFinished = False
+        
+        """Add a command to the parallel sequence"""
+        def addCommand(self, command):
+            self.commands.append(command)
+        
+        """Run the parallel command sequence, should be called in main loop"""
+        def runParallelCommands(self):
+            if self.isRunning:
+                allFinished = True
+                
+                # Run all commands
+                for command in self.commands:
+                    command.run()
+                    
+                # Check end conditions
+                for command in self.commands:
+                    if command.isFinished:
+                        # Race condition ends when one command finishes
+                        if self.endCondition is parallelCommandSequence.RACE:
+                            # End all commands in sequence
+                            self.isFinished = True
+                            for cmd in self.commands:
+                                cmd.cancel()
+                    # If one command is not finished, the allFinished condition is false         
+                    else: allFinished = False
+                    
+                # If the allFinished condition is met, the LAST condition is satisfied
+                if allFinished and self.endCondition is parallelCommandSequence.LAST:
+                    self.isFinished = True
+                    for cmd in self.commands:
+                        cmd.cancel()
+                  
+        """Start the command sequence"""
+        def start(self):
+            runningCommandSequences.append(self)
+            self.isRunning = True
+
+        """Cancel the command sequence"""
+        def cancel(self):
+            runningCommandSequences.remove(self)
+            self.isRunning = False
+                    
     """Class meant to handle the definition and execution of a single command
         commandString: String passed into ProcessCommand()
     """
     class Command:
-        def __init__(self, commandString):
+        def __init__(self, commandString, requirements=[]):
             self.commandString = commandString # String passed into ProcessCommand
             self.isFinished = False
             self.finishedCondition = None
             self.hasStarted = False
+            self.requirements = requirements
+        
+        """Add a requirement that must be true for the command to run
+            Requrement: Boolean or function that returns a boolean
+        """
+        def addRequirement(self, requirement):
+            self.requirements.append(lambda: requirement)
+        
+        """Check if all requirements are met"""
+        def checkRequirements(self):
+            for req in self.requirements:
+                if req() == False:
+                    return False
+            return True
         
         """Run the command, should be called in main loop"""
         def run(self):
-            if not self.isFinished:
+            if not self.isFinished and self.checkRequirements():
                 # First frame of running, process the command
                 if not self.hasStarted:
                     self.finishedCondition = processCommand(self.commandString)
@@ -599,13 +666,19 @@ try:
                 
                 if self.isFinished:
                     self.hasStarted = False
-    
+        
+        """Cancel the command"""
+        def cancel(self):
+            self.isFinished = True
+            self.hasStarted = False
+            
     """Helper class to create commands"""
     class commandCreator:
         """Create a wait command"""
         def getWaitCommand(timeInSeconds):
             return Command("wait"+timeInSeconds)
         
+        """Create a rotation command"""
         def getRotationCommand(degreesToRotate):
             return Command("rotate"+degreesToRotate) 
         
@@ -750,7 +823,7 @@ try:
                         radio.sendString("Alive")
                 else:
                     error("Command Not Understood")
-            
+            # Save different data to SD Card            
             elif inString[0:4] is "save":
                 inString = inString[4:]
                 if inString[0:3] is "gps":
@@ -765,23 +838,26 @@ try:
                     saveValue("Power Save", str(power.getData()))
                 else:
                     error("Command Not Understood")
-            
+            # Rotate the cube
             elif inString[0:6] is "rotate":
-                degreesToRotate = float(inString[6:])
-                rotationSystem.startRotation(degreesToRotate)
-                radio.sendString("Rotating "+str(degreesToRotate)+" Degrees")
-                commandCompleteCase = lambda: not rotationSystem.isRotating
-
+                inString = inString[6:]
+                if inString is "brake":
+                    rotationSystem.stopRotation()
+                    commandCompleteCase = lambda: not rotationSystem.isRotating
+                else:
+                    degreesToRotate = float(inString)   
+                    rotationSystem.startRotation(degreesToRotate)
+                    radio.sendString("Rotating "+str(degreesToRotate)+" Degrees")
+                    commandCompleteCase = lambda: not rotationSystem.isRotating
+            # Wait command
             elif inString[0:4] is "wait":
                 waitTime = int(inString[4:])
                 clock.sleep(waitTime)
-
             # Reset Cube
             elif inString[0:5] is "reset":
                 #config.saveConfig()
                 radio.sendString("Reseting...")
                 microcontroller.reset()
-            
             # Toggle lightshow
             elif inString[0:9] is "runlights":
                 startupLightshow()
@@ -856,7 +932,7 @@ try:
     config.loadConfig()
 
     # Instantiate current command sequence as an empty command sequence
-    currentCommandSequence = commandSequence()
+    runningCommandSequences = []
 
     # Timing Intervals
     clockTimer = 2
@@ -871,6 +947,12 @@ try:
         if abs(clock.monotonic()%clockTimer) == 0:
             processCommand(str(radio.readIncoming())) # Process incoming commands
             sendData() # Send any data that is toggled to be sent
+            rotationSystem.runRotation() # Run rotation control loop
+            for commandSequence in runningCommandSequences:
+                if isinstance(commandSequence, commandSequence):
+                    commandSequence.runCommandSequence()
+                elif isinstance(commandSequence, parallelCommandSequence):
+                    commandSequence.runParallelCommands()
             processLED.toggle() # Visualize clock cycle
             receiveLED.turnOff() # Reset recieve LED
             errorLED.turnOff() # Reset error LED
