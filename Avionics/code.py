@@ -522,171 +522,71 @@ try:
                         # (100% - percent completed) = percent throttle
                         flywheel.spinCounterClockwise(((abs(self.degreesToRotate) - abs(self.rotatedDegrees)) / abs(self.degreesToRotate)) * 100)
                 
-    """Class to handle the execution of a sequence of commands"""
-    class commandSequence:
-        def __init__(self, commands=[]):
-            self.commands = commands
-            self.isRunning = False
-            self.currentCommandIndex = 0
-            self.isParallel = False
-        
-        """Add a command to the end of the sequence"""
-        def addCommand(self, command):
-            self.commands.append(command)
-        
-        """Remove the last command added"""
-        def removeLastCommand(self):
-            if len(self.commands > 0):
-                self.commands.pop()
-                
-        """Remove a command at a specific index"""
-        def removeCommandAtIndex(self, index):
-            if self.commands[index] != None:
-                self.commands.pop(index)
-            else:
-                error("Index Of Command Out Of Bounds")
-
-        """Run the last command added"""
-        def runLastCommand(self):
-            if len(self.commands > 0):
-                self.commands[len(self.commands) - 1].run()
-
-        """Run a command at a specific index"""
-        def runCommandAtIndex(self, index):
-            if index < len(self.commands):
-                self.commands[index].run()
-            else:
-                error("Index Of Command Out Of Bounds")
-
-        """Run the command sequence, should be called in main loop"""
-        def runCommandSequence(self):
-            if self.isRunning and self.currentCommandIndex < len(self.commands):
-                # Process the current command
-                self.commands[self.currentCommandIndex].run()
-                if self.commands[self.currentCommandIndex].isFinished:
-                    self.currentCommandIndex += 1
-            else:
-                self.cancel()
-                
-        """Start the command sequence"""
-        def start(self):
-            self.currentCommandIndex = 0
-            runningCommandSequences.append(self)
-            self.isRunning = True
-
-        """Cancel the command sequence"""
-        def cancel(self):
-            self.currentCommandIndex = 0
-            runningCommandSequences.remove(self)
-            self.isRunning = False
-
-    RACE = 1
-    LAST = 2
-    """Class to handle the execution of a parallel sequence of commands"""
-    class parallelCommandSequence:
-        def __init__(self, commands=[], endCondition=LAST):
-            self.commands = commands
-            self.endCondition = endCondition
-            self.isRunning = False
-            self.isFinished = False
-            self.isParallel = True
-        
-        """Add a command to the parallel sequence"""
-        def addCommand(self, command):
-            self.commands.append(command)
-        
-        """Run the parallel command sequence, should be called in main loop"""
-        def runCommandSequence(self):
-            if self.isRunning:
-                allFinished = True
-                
-                # Run all commands
-                for cmd in self.commands:
-                    cmd.run()
-                    
-                # Check end conditions
-                for cmd in self.commands:
-                    if cmd.isFinished:
-                        # Race condition ends when one command finishes
-                        if self.endCondition is RACE:
-                            # End all commands in sequence
-                            self.isFinished = True
-                            for cmd2 in self.commands:
-                                cmd2.cancel()
-                            break
-                    # If one command is not finished, the allFinished condition is false         
-                    else: allFinished = False
-                    
-                # If the allFinished condition is met, the LAST condition is satisfied
-                if allFinished and self.endCondition is LAST:
-                    self.isFinished = True
-                    for cmd in self.commands:
-                        cmd.cancel()
-                  
-        """Start the command sequence"""
-        def start(self):
-            runningCommandSequences.append(self)
-            self.isRunning = True
-
-        """Cancel the command sequence"""
-        def cancel(self):
-            runningCommandSequences.remove(self)
-            self.isRunning = False
-                    
-    """Class meant to handle the definition and execution of a single command
-        commandString: String passed into ProcessCommand()
-        requirements: List of boolean values that must be true for the command to run
-    """
+    """Class to handle scheduled execution of an action"""
     class Command:
-        def __init__(self, commandString, requirements=[]):
-            self.commandString = "b'" +commandString # String passed into ProcessCommand
-            self.isFinished = False
-            self.finishedCondition = None
-            self.hasStarted = False
+        def __init__(self, action, requirements=[], finishConditions=[lambda:True]):
+            self.action = action
             self.requirements = requirements
+            self.finishConditions = finishConditions
+            self.isRunning = False
         
-        """Add a requirement that must be true for the command to run
-            Requrement: Boolean or function that returns a boolean
-        """
+        """Add a requirement to be checked before the command is executed"""
         def addRequirement(self, requirement):
-            self.requirements.append(requirement)
-        
-        """Check if all requirements are met"""
+            if isinstance(requirement, list): self.requirements.extend(requirement)
+            else: self.requirements.append(requirement)
+
+        def addFinishCondition(self, condition):
+            if isinstance(condition, list): self.requirements.extend(condition)
+            else: self.requirements.append(condition)
+
         def checkRequirements(self):
-            for req in self.requirements:
-                if req() == False:
+            for requirement in self.requirements:
+                if not requirement():
+                    return False
+            return True
+
+        def checkFinishConditions(self):
+            for condition in self.finishConditions:
+                if not condition:
+                    return False
+            return True
+
+        def execute(self):
+            if self.checkRequirements():
+                if self.isRunning: self.action()
+                if self.checkFinishConditions(): self.isRunning = False
+        
+        def cancel(self):
+            self.isRunning = False
+
+    LAST = 1
+    RACE = 2
+    class parallelCommandSequence(Command):
+        def __init__(self, commands=[], requirements=[], finishCondition=LAST):
+            super()
+            self.commands = commands
+            self.requirements = requirements
+            self.finishConditions = []
+            for cmd in commands:
+                self.addRequirement(cmd.requirements)
+            if finishCondition == LAST:
+                self.addFinishCondition(lambda: self.allCommandsFinished())
+            else:
+                self.addFinishCondition(lambda: self.oneCommandFinished())
+        
+        def allCommandsFinished(self):
+            for cmd in self.commands:
+                if not cmd.isFinished:
                     return False
             return True
         
-        """Run the command, should be called in main loop"""
-        def run(self):
-            if not self.isFinished and self.checkRequirements():
-                # First frame of running, process the command
-                if not self.hasStarted:
-                    self.finishedCondition = processCommand(self.commandString)
-                    
-                self.hasStarted = True
-                # Every frame it runs, re-check the command's finished condition
-                self.isFinished = self.finishedCondition()
-                
-                if self.isFinished:
-                    self.hasStarted = False
-        
-        """Cancel the command"""
-        def cancel(self):
-            self.isFinished = True
-            self.hasStarted = False
+        def oneCommandFinished(self):
+            for cmd in self.commands:
+                if cmd.isFinished:
+                    return True
+            return False
             
-    """Helper class to create commands"""
-    class commandCreator:
-        """Create a wait command"""
-        def getWaitCommand(timeInSeconds):
-            return Command("wait"+str(timeInSeconds))
-        
-        """Create a rotation command"""
-        def getRotationCommand(degreesToRotate):
-            return Command("rotate"+str(degreesToRotate)) 
-    
+
     """Simple timer class"""
     class timer:
         def __init__(self):
@@ -973,8 +873,6 @@ try:
     testCommandSequence.addCommand(Command("led tx"))
     
     while True:
-        for cs in runningCommandSequences:
-            cs.runCommandSequence()
             
         if abs(clock.monotonic()%clockTimer) == 0:
             processCommand(str(radio.readIncoming())) # Process incoming commands
