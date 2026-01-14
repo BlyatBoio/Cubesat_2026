@@ -288,22 +288,22 @@ try:
             try:
                 super().__init__()
                 # Define access point for Power Draw Data
-                self.powerDrawInterface = INA219(I2C0,addr=0x45)
-                self.boardArgs = [I2C0, "Address: 0x45"]
+                #self.powerDrawInterface = INA219(I2C0,addr=0x45)
+                #self.boardArgs = [I2C0, "Address: 0x45"]
 
                 # Set default parameters for the interface
-                self.powerDrawInterface.bus_adc_resolution = ADCResolution.ADCRES_12BIT_32S
-                self.powerDrawInterface.shunt_adc_resolution = ADCResolution.ADCRES_12BIT_32S
-                self.powerDrawInterface.bus_voltage_range = BusVoltageRange.RANGE_16V
+                #self.powerDrawInterface.bus_adc_resolution = ADCResolution.ADCRES_12BIT_32S
+                ##self.powerDrawInterface.shunt_adc_resolution = ADCResolution.ADCRES_12BIT_32S
+                #self.powerDrawInterface.bus_voltage_range = BusVoltageRange.RANGE_16V
                 
                 # Define access point for Solar Data
-                self.solar1Inteface = Solar(0x40)
-                self.solar2Inteface = Solar(0x41)
-                self.solar3Inteface = Solar(0x44)
+                #self.solar1Inteface = Solar(0x40)
+                #self.solar2Inteface = Solar(0x41)
+                #self.solar3Inteface = Solar(0x44)
                 
                 # Define access point for Batery Data
-                self.batteryInterface = adafruit_max1704x.MAX17048(I2C0,address=0x36)
-                self.isFunctional = True
+                #self.batteryInterface = adafruit_max1704x.MAX17048(I2C0,address=0x36)
+                self.isFunctional = False
             except:
                 self.isFunctional = False
                 error("Failed To Setup Power ")
@@ -580,11 +580,11 @@ try:
             runningCommandSequences.remove(self)
             self.isRunning = False
 
+    RACE = 1
+    LAST = 2
     """Class to handle the execution of a parallel sequence of commands"""
     class parallelCommandSequence:
-        def __init__(self, commands=[], endCondition=2):
-            RACE = 1
-            LAST = 2
+        def __init__(self, commands=[], endCondition=LAST):
             self.commands = commands
             self.endCondition = endCondition
             self.isRunning = False
@@ -596,28 +596,29 @@ try:
             self.commands.append(command)
         
         """Run the parallel command sequence, should be called in main loop"""
-        def runParallelCommands(self):
+        def runCommandSequence(self):
             if self.isRunning:
                 allFinished = True
                 
                 # Run all commands
-                for command in self.commands:
-                    command.run()
+                for cmd in self.commands:
+                    cmd.run()
                     
                 # Check end conditions
-                for command in self.commands:
-                    if command.isFinished:
+                for cmd in self.commands:
+                    if cmd.isFinished:
                         # Race condition ends when one command finishes
-                        if self.endCondition is parallelCommandSequence.RACE:
+                        if self.endCondition is RACE:
                             # End all commands in sequence
                             self.isFinished = True
-                            for cmd in self.commands:
-                                cmd.cancel()
+                            for cmd2 in self.commands:
+                                cmd2.cancel()
+                            break
                     # If one command is not finished, the allFinished condition is false         
                     else: allFinished = False
                     
                 # If the allFinished condition is met, the LAST condition is satisfied
-                if allFinished and self.endCondition is parallelCommandSequence.LAST:
+                if allFinished and self.endCondition is LAST:
                     self.isFinished = True
                     for cmd in self.commands:
                         cmd.cancel()
@@ -878,6 +879,7 @@ try:
             # Toggle lightshow
             elif inString[0:9] is "runlights":
                 startupLightshow()
+            #Evaluate arbitrary code
             elif inString[0:4] is "eval":
                 try:
                     eval(inString[4:])
@@ -947,7 +949,7 @@ try:
     altimeter = Altimeter()
     imu = IMU()
     magnometer = Magnometer()
-    #power = Power()
+    power = Power()
     flywheel = FlywheelMotor()
     rotationSystem = rotationControlSystem()
     sd = SDCard()
@@ -966,18 +968,13 @@ try:
     startupLightshow()
     radio.sendString("Cubesat Initialized")
     
-    testCommandSequence = commandSequence()
+    testCommandSequence = parallelCommandSequence([], LAST)
     testCommandSequence.addCommand(Command("led gps"))
-    testCommandSequence.addCommand(commandCreator.getWaitCommand(2))
-    testCommandSequence.addCommand(Command("led gps"))
-    testCommandSequence.start()
-        
+    testCommandSequence.addCommand(Command("led tx"))
+    
     while True:
         for cs in runningCommandSequences:
-            if cs.isParallel:
-                cs.runParallelCommands()
-            else:
-                cs.runCommandSequence()
+            cs.runCommandSequence()
             
         if abs(clock.monotonic()%clockTimer) == 0:
             processCommand(str(radio.readIncoming())) # Process incoming commands
