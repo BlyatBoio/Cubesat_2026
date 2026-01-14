@@ -638,7 +638,7 @@ try:
     """
     class Command:
         def __init__(self, commandString, requirements=[]):
-            self.commandString = commandString # String passed into ProcessCommand
+            self.commandString = "b'" +commandString # String passed into ProcessCommand
             self.isFinished = False
             self.finishedCondition = None
             self.hasStarted = False
@@ -648,7 +648,7 @@ try:
             Requrement: Boolean or function that returns a boolean
         """
         def addRequirement(self, requirement):
-            self.requirements.append(lambda: requirement)
+            self.requirements.append(requirement)
         
         """Check if all requirements are met"""
         def checkRequirements(self):
@@ -685,8 +685,9 @@ try:
         """Create a rotation command"""
         def getRotationCommand(degreesToRotate):
             return Command("rotate"+str(degreesToRotate)) 
-        
-    class Timer:
+    
+    """Simple timer class"""
+    class timer:
         def __init__(self):
             self.startTime = clock.monotonic()
         
@@ -729,6 +730,7 @@ try:
             # Ping the cube for a response
             if inString[0:4] is "ping":
                 radio.sendString("pong")
+            # Set data 
             elif inString[0:3] is "set":
                 inString = inString[3:]
 
@@ -876,6 +878,11 @@ try:
             # Toggle lightshow
             elif inString[0:9] is "runlights":
                 startupLightshow()
+            elif inString[0:4] is "eval":
+                try:
+                    eval(inString[4:])
+                except:
+                    error("Failed To Evaluate Command")
             else:
                 error("Command Not Understood")
             
@@ -932,7 +939,7 @@ try:
     receiveLED = LED(board.GP18)
     errorLED = LED(board.GP19)
 
-    commandTimer = Timer()
+    commandTimer = timer()
 
     # Define and initialize all onboard devices
     radio = Tranciever()
@@ -961,7 +968,7 @@ try:
     
     testCommandSequence = commandSequence()
     testCommandSequence.addCommand(Command("led gps"))
-    testCommandSequence.addCommand(commandCreator.getWaitCommand(1))
+    testCommandSequence.addCommand(commandCreator.getWaitCommand(2))
     testCommandSequence.addCommand(Command("led gps"))
     testCommandSequence.start()
         
