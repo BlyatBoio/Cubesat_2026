@@ -528,6 +528,7 @@ try:
             self.commands = commands
             self.isRunning = False
             self.currentCommandIndex = 0
+            self.isParallel = False
         
         """Add a command to the end of the sequence"""
         def addCommand(self, command):
@@ -565,16 +566,17 @@ try:
                 if self.commands[self.currentCommandIndex].isFinished:
                     self.currentCommandIndex += 1
             else:
-                self.isRunning = False
-                self.currentCommandIndex = 0
-
+                self.cancel()
+                
         """Start the command sequence"""
         def start(self):
+            self.currentCommandIndex = 0
             runningCommandSequences.append(self)
             self.isRunning = True
 
         """Cancel the command sequence"""
         def cancel(self):
+            self.currentCommandIndex = 0
             runningCommandSequences.remove(self)
             self.isRunning = False
 
@@ -587,6 +589,7 @@ try:
             self.endCondition = endCondition
             self.isRunning = False
             self.isFinished = False
+            self.isParallel = True
         
         """Add a command to the parallel sequence"""
         def addCommand(self, command):
@@ -631,6 +634,7 @@ try:
                     
     """Class meant to handle the definition and execution of a single command
         commandString: String passed into ProcessCommand()
+        requirements: List of boolean values that must be true for the command to run
     """
     class Command:
         def __init__(self, commandString, requirements=[]):
@@ -676,11 +680,23 @@ try:
     class commandCreator:
         """Create a wait command"""
         def getWaitCommand(timeInSeconds):
-            return Command("wait"+timeInSeconds)
+            return Command("wait"+str(timeInSeconds))
         
         """Create a rotation command"""
         def getRotationCommand(degreesToRotate):
-            return Command("rotate"+degreesToRotate) 
+            return Command("rotate"+str(degreesToRotate)) 
+        
+    class Timer:
+        def __init__(self):
+            self.startTime = clock.monotonic()
+        
+        """Reset the timer to 0"""
+        def reset(self):
+            self.startTime = clock.monotonic()
+        
+        """Get the elapsed time since the last reset"""
+        def getElapsedTime(self):
+            return clock.monotonic() - self.startTime
         
     """Send an error via radio and log it to the SD Card"""
     def error(errorMessage):
@@ -701,9 +717,7 @@ try:
         # allow for user to pass in a string to process
         
         if inString is not "None": receiveLED.turnOn()
-        else: return
-        
-        commandCompleteCase = lambda: True
+        else: return lambda: True
         
         # Format string to be more default and readable
         inString = inString.lower()
@@ -843,16 +857,17 @@ try:
                 inString = inString[6:]
                 if inString is "brake":
                     rotationSystem.stopRotation()
-                    commandCompleteCase = lambda: not rotationSystem.isRotating
+                    return lambda: not rotationSystem.isRotating
                 else:
                     degreesToRotate = float(inString)   
                     rotationSystem.startRotation(degreesToRotate)
                     radio.sendString("Rotating "+str(degreesToRotate)+" Degrees")
-                    commandCompleteCase = lambda: not rotationSystem.isRotating
+                    return lambda: not rotationSystem.isRotating
             # Wait command
             elif inString[0:4] is "wait":
                 waitTime = int(inString[4:])
-                clock.sleep(waitTime)
+                commandTimer.reset()
+                return lambda: commandTimer.getElapsedTime() >= waitTime
             # Reset Cube
             elif inString[0:5] is "reset":
                 #config.saveConfig()
@@ -864,10 +879,10 @@ try:
             else:
                 error("Command Not Understood")
             
-            return commandCompleteCase
+            return lambda: True
         except:
             error("Failed To Interpret Command")  
-            return True # Returning false would lead to commands getting stuck in a loop 
+            return lambda: True # Returning false would lead to commands getting stuck in a loop 
        
     """Send data based on config toggles""" 
     def sendData():
@@ -917,6 +932,8 @@ try:
     receiveLED = LED(board.GP18)
     errorLED = LED(board.GP19)
 
+    commandTimer = Timer()
+
     # Define and initialize all onboard devices
     radio = Tranciever()
     gps = GPS()
@@ -941,18 +958,24 @@ try:
     # Visual startup
     startupLightshow()
     radio.sendString("Cubesat Initialized")
-
-    while True:
+    
+    testCommandSequence = commandSequence()
+    testCommandSequence.addCommand(Command("led gps"))
+    testCommandSequence.addCommand(commandCreator.getWaitCommand(1))
+    testCommandSequence.addCommand(Command("led gps"))
+    testCommandSequence.start()
         
+    while True:
+        for cs in runningCommandSequences:
+            if cs.isParallel:
+                cs.runParallelCommands()
+            else:
+                cs.runCommandSequence()
+            
         if abs(clock.monotonic()%clockTimer) == 0:
             processCommand(str(radio.readIncoming())) # Process incoming commands
             sendData() # Send any data that is toggled to be sent
             rotationSystem.runRotation() # Run rotation control loop
-            for commandSequence in runningCommandSequences:
-                if isinstance(commandSequence, commandSequence):
-                    commandSequence.runCommandSequence()
-                elif isinstance(commandSequence, parallelCommandSequence):
-                    commandSequence.runParallelCommands()
             processLED.toggle() # Visualize clock cycle
             receiveLED.turnOff() # Reset recieve LED
             errorLED.turnOff() # Reset error LED
