@@ -525,38 +525,51 @@ try:
     """Class to handle scheduled execution of an action"""
     class Command:
         def __init__(self, action, requirements=[], finishConditions=[lambda:True]):
-            self.action = action
-            self.requirements = requirements
-            self.finishConditions = finishConditions
+            self.action = action #Lambda statement to be called in execute
+            self.requirements = requirements # Lambda functions checked every execution to ensure the command will function
+            self.finishConditions = finishConditions # Lambda functions checked every execution to determine whether the command is finished or not
+            # Variables to function as a state machine
             self.isRunning = False
+            self.isFinished = False
+            self.hasStarted = False
         
         """Add a requirement to be checked before the command is executed"""
         def addRequirement(self, requirement):
-            if isinstance(requirement, list): self.requirements.extend(requirement)
+            if isinstance(requirement, list): self.requirements.extend(requirement) # Append a list
             else: self.requirements.append(requirement)
 
+        """Add a condition that will prevent the command from being finished until it returns true"""
         def addFinishCondition(self, condition):
-            if isinstance(condition, list): self.requirements.extend(condition)
+            if isinstance(condition, list): self.requirements.extend(condition) # Append a list
             else: self.requirements.append(condition)
 
+        """Check every requirement and return if they are all met"""
         def checkRequirements(self):
             for requirement in self.requirements:
                 if not requirement():
                     return False
             return True
 
+        """Check every finish condition and return if they are all met"""
         def checkFinishConditions(self):
             for condition in self.finishConditions:
                 if not condition:
                     return False
             return True
 
+        """Perform the action and handle requirements and finish conditions"""
         def execute(self):
+            if not self.hasStarted: self.isRunning = True
+            self.hasStarted = True
             if self.checkRequirements():
                 if self.isRunning: self.action()
-                if self.checkFinishConditions(): self.isRunning = False
+                if self.checkFinishConditions(): self.cancel()
         
+        """Stop the command from running"""
         def cancel(self):
+            Commands.runningCommands.remove(self)
+            self.isFinished = True
+            self.hasStarted = False
             self.isRunning = False
 
     LAST = 1
@@ -564,9 +577,11 @@ try:
     class parallelCommandSequence(Command):
         def __init__(self, commands=[], requirements=[], finishCondition=LAST):
             super()
+
             self.commands = commands
             self.requirements = requirements
             self.finishConditions = []
+            self.action = lambda: self.runCommands()
             for cmd in commands:
                 self.addRequirement(cmd.requirements)
             if finishCondition == LAST:
@@ -585,7 +600,38 @@ try:
                 if cmd.isFinished:
                     return True
             return False
-            
+
+        def runCommands(self):
+            for cmd in self.commands:
+                cmd.execute()
+
+    class commandSequence(Command):
+        def __init__(self, commands=[], requirements=[]):
+            super()
+            self.commands = commands
+            self.requirements = requirements
+            self.action = lambda: self.runCommands()
+            self.currentCommandIndex = 0
+            self.addFinishCondition(lambda: self.currentCommandIndex > len(self.commands))
+
+            for cmd in commands:
+                self.requirements.append(cmd.requirements)
+
+        def runCommands(self):
+            self.commands[self.currentCommandIndex].execute()
+            if self.commands[self.currentCommandIndex].isFinished:
+                self.currentCommandIndex += 1
+
+    class Commands:
+        def __init__(self):
+            self.runningCommands = []
+
+        def runCommands(self):
+            for cmd in self.runningCommands:
+                cmd.execute()
+        
+        def runCommand(self, Command):
+            self.runningCommands.append(Command)
 
     """Simple timer class"""
     class timer:
@@ -857,12 +903,11 @@ try:
     config = cubesatConfig()
     config.loadConfig()
 
-    # Instantiate current command sequence as an empty command sequence
-    runningCommandSequences = []
-
     # Timing Intervals
     clockTimer = 2
     pingTimer = 1
+
+    commands = Commands()
 
     # Visual startup
     startupLightshow()
@@ -874,6 +919,8 @@ try:
     
     while True:
             
+        commands.runCommands()
+
         if abs(clock.monotonic()%clockTimer) == 0:
             processCommand(str(radio.readIncoming())) # Process incoming commands
             sendData() # Send any data that is toggled to be sent
