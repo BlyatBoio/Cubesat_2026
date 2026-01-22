@@ -2,6 +2,7 @@ import board
 import busio
 import pwmio
 import math
+import random
 import storage
 import analogio
 import digitalio
@@ -524,14 +525,22 @@ try:
                 
     """Class to handle scheduled execution of an action"""
     class Command:
-        def __init__(self, action, requirements=[], finishConditions=[lambda:True]):
+        def __init__(self, action=lambda:Commands.doNothing(), requirements=[], finishConditions=[lambda:True]):
             self.action = action #Lambda statement to be called in execute
-            self.requirements = requirements # Lambda functions checked every execution to ensure the command will function
-            self.finishConditions = finishConditions # Lambda functions checked every execution to determine whether the command is finished or not
-            # Variables to function as a state machine
-            self.isRunning = False
+            self.cmdID = Commands.numCommands # ID used to determine if a command is the same
+            Commands.numCommands += 1
             self.isFinished = False
-            self.hasStarted = False
+
+            # Lambda functions checked every execution to ensure the command will function
+            if not isinstance(requirements, list): self.requirements = [requirements]
+            else: self.requirements = requirements 
+            
+            # Lambda functions checked every execution to determine whether the command is finished or not
+            if not isinstance(finishConditions, list): self.finishConditions = [finishConditions] 
+            else: self.finishConditions = finishConditions
+        
+        def __eq__(self, other):
+            return self.cmdID == other.cmdID
         
         """Add a requirement to be checked before the command is executed"""
         def addRequirement(self, requirement):
@@ -540,50 +549,59 @@ try:
 
         """Add a condition that will prevent the command from being finished until it returns true"""
         def addFinishCondition(self, condition):
-            if isinstance(condition, list): self.requirements.extend(condition) # Append a list
-            else: self.requirements.append(condition)
+            if isinstance(condition, list): self.finishConditions.extend(condition) # Append a list
+            else: self.finishConditions.append(condition)
 
         """Check every requirement and return if they are all met"""
         def checkRequirements(self):
+            if len(self.requirements) == 0: 
+                return True
             for requirement in self.requirements:
-                if not requirement():
+                if (not requirement()):
                     return False
             return True
 
         """Check every finish condition and return if they are all met"""
         def checkFinishConditions(self):
             for condition in self.finishConditions:
-                if not condition:
+                if not condition():
                     return False
             return True
 
+        def start(self):
+            Commands.runCommand(self)
+            self.isFinished = False
+
         """Perform the action and handle requirements and finish conditions"""
         def execute(self):
-            if not self.hasStarted: self.isRunning = True
-            self.hasStarted = True
             if self.checkRequirements():
-                if self.isRunning: self.action()
+                self.action()
                 if self.checkFinishConditions(): self.cancel()
+        
+        def andThen(self, Command):
+            if isinstance(self, commandSequence): self.addCommand(Command)
+            else: self = commandSequence([self, Command])
+            return self
         
         """Stop the command from running"""
         def cancel(self):
-            Commands.runningCommands.remove(self)
             self.isFinished = True
-            self.hasStarted = False
-            self.isRunning = False
+            Commands.removeCommand(self)
 
     LAST = 1
     RACE = 2
     class parallelCommandSequence(Command):
         def __init__(self, commands=[], requirements=[], finishCondition=LAST):
-            super()
+            super().__init__()
 
             self.commands = commands
             self.requirements = requirements
-            self.finishConditions = []
             self.action = lambda: self.runCommands()
+            self.finishConditions = []
+            
             for cmd in commands:
                 self.addRequirement(cmd.requirements)
+            
             if finishCondition == LAST:
                 self.addFinishCondition(lambda: self.allCommandsFinished())
             else:
@@ -602,36 +620,71 @@ try:
             return False
 
         def runCommands(self):
-            for cmd in self.commands:
-                cmd.execute()
+            for cmd in self.commandsToStart:
+                if not (Commands.runningCommands.__contains__(cmd) or Commands.commandsToRun.__contains__(cmd)): 
+                    cmd.start()
 
     class commandSequence(Command):
         def __init__(self, commands=[], requirements=[]):
-            super()
+            super().__init__()
+            
             self.commands = commands
             self.requirements = requirements
             self.action = lambda: self.runCommands()
             self.currentCommandIndex = 0
-            self.addFinishCondition(lambda: self.currentCommandIndex > len(self.commands))
-
+            self.finishConditions = []
             for cmd in commands:
-                self.requirements.append(cmd.requirements)
-
+                self.addRequirement(cmd.requirements)
+            
+            self.addFinishCondition((lambda: self.getIsFinished()))
+            
         def runCommands(self):
-            self.commands[self.currentCommandIndex].execute()
-            if self.commands[self.currentCommandIndex].isFinished:
+            if  self.currentCommandIndex == 0 or self.commands[self.currentCommandIndex-1].isFinished:
+                self.commands[self.currentCommandIndex].start()
                 self.currentCommandIndex += 1
 
-    class Commands:
-        def __init__(self):
-            self.runningCommands = []
+        def getIsFinished(self):
+            return self.currentCommandIndex > len(self.commands)-1
 
-        def runCommands(self):
-            for cmd in self.runningCommands:
+        def addCommand(self, command):
+            self.commands.append(command)
+            self.addRequirement(command.requirements)
+
+    class Commands:
+        runningCommands = []
+        commandsToRun = []
+        commandsToRemove = []
+        numCommands = 0
+
+        def update():
+            if len(Commands.commandsToRun) > 0:
+                Commands.runningCommands.extend(Commands.commandsToRun)
+                Commands.commandsToTun = []
+
+            for cmd in Commands.commandsToRemove:
+            #    Commands.runningCommands.pop(Commands.runningCommands.index(cmd))
+                newArray = []
+                for cmd2 in Commands.runningCommands:
+                    if cmd is not cmd2:
+                        newArray.append(cmd2)
+                Commands.runningCommands = newArray
+
+            for cmd in Commands.runningCommands:
                 cmd.execute()
+                
         
-        def runCommand(self, Command):
-            self.runningCommands.append(Command)
+        def runCommand(Command):
+            Commands.commandsToRun.append(Command)
+        
+        def removeCommand(Command):
+            Commands.commandsToRemove.append(Command)
+        
+        def getWaitCommand(seconds):
+            t = timer()
+            return Command(lambda: Commands.doNothing(), [], [lambda: t.getElapsedTime() > seconds])
+
+        def doNothing():
+            pass
 
     """Simple timer class"""
     class timer:
@@ -907,19 +960,18 @@ try:
     clockTimer = 2
     pingTimer = 1
 
-    commands = Commands()
-
     # Visual startup
     startupLightshow()
     radio.sendString("Cubesat Initialized")
-    
-    testCommandSequence = parallelCommandSequence([], LAST)
-    testCommandSequence.addCommand(Command("led gps"))
-    testCommandSequence.addCommand(Command("led tx"))
-    
+
+    #testCommand = Command(lambda:transmitLED.turnOn()).andThen(Commands.getWaitCommand(2)).andThen(Command(lambda:transmitLED.turnOff()))
+    testCommand = parallelCommandSequence([Command(lambda:transmitLED.turnOn()), Command(lambda:receiveLED.turnOn())])
+    testCommand.andThen(Commands.getWaitCommand(2))
+    testCommand.andThen(parallelCommandSequence([Command(lambda:transmitLED.turnOff()), Command(lambda:receiveLED.turnOff())]))
+    Commands.runCommand(testCommand)
+
     while True:
-            
-        commands.runCommands()
+        Commands.update()
 
         if abs(clock.monotonic()%clockTimer) == 0:
             processCommand(str(radio.readIncoming())) # Process incoming commands
