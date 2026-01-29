@@ -523,6 +523,8 @@ try:
                         # (100% - percent completed) = percent throttle
                         flywheel.spinCounterClockwise(((abs(self.degreesToRotate) - abs(self.rotatedDegrees)) / abs(self.degreesToRotate)) * 100)
                 
+    LAST = 1
+    RACE = 2
     """Class to handle scheduled execution of an action"""
     class Command:
         def __init__(self, action=lambda:Commands.doNothing(), requirements=[], finishConditions=[lambda:True]):
@@ -555,8 +557,11 @@ try:
 
         """Check every requirement and return if they are all met"""
         def checkRequirements(self):
+            # if there are no requirements, return true
             if len(self.requirements) == 0: 
                 return True
+            
+            # Check all requirements
             for requirement in self.requirements:
                 if (not requirement()):
                     return False
@@ -569,10 +574,11 @@ try:
                     return False
             return True
 
+        """Start the command"""
         def start(self):
             self.hasStarted = True
-            Commands.runCommand(self)
             self.isFinished = False
+            Commands.runCommand(self)
 
         """Perform the action and handle requirements and finish conditions"""
         def execute(self):
@@ -580,22 +586,22 @@ try:
                 self.action()
                 if self.checkFinishConditions(): self.cancel()
         
+        """Add a command to be run once this command finishes"""
         def andThen(self, Command):
             if isinstance(self, commandSequence): self.addCommand(Command)
-            else: 
-                self = commandSequence([self, Command])
+            else: self = commandSequence([self, Command])
             return self
         
+        """Add a command to be run along side this command and end both commands when the first finishes"""
         def raceWith(self, Command):
             if isinstance(self, parallelCommandSequence): self.addCommand(Command)
-            else: 
-                self = parallelCommandSequence([self, Command], [], RACE)
+            else: self = parallelCommandSequence([self, Command], [], RACE)
             return self
         
+        """Add a command to be run along side this command"""
         def runWith(self, Command):
             if isinstance(self, parallelCommandSequence): self.addCommand(Command)
-            else: 
-                self = parallelCommandSequence([self, Command], [], LAST)
+            else: self = parallelCommandSequence([self, Command], [], LAST)
             return self
         
         """Stop the command from running"""
@@ -604,41 +610,50 @@ try:
             self.hasStarted = False
             Commands.removeCommand(self)
 
-    LAST = 1
-    RACE = 2
+    """List of commands run in parallel"""
     class parallelCommandSequence(Command):
         def __init__(self, commands=[], requirements=[], finishCondition=LAST):
+            # Define end condition
             finishLam = lambda: self.oneCommandFinished()
-            if finishCondition == LAST: finishLam = lambda: self.allCommandsFinished()
-            super().__init__(lambda: Commands.doNothing(), requirements, [finishLam])
+            if finishCondition == LAST: finishLam = lambda: self.allCommandsFinished() 
+            
+            super().__init__(lambda: Commands.doNothing(), requirements, [finishLam]) # Initialzie parent command class
             self.commands = commands
 
             for cmd in commands:
                 self.addRequirement(cmd.requirements)
         
+        """Add a command to be run in parallel"""
         def addCommand(self, command):
             self.commands.append(command)
             self.addRequirement(command.requirements)
         
+        """Check if all the commands are finished / LAST finish condition"""
         def allCommandsFinished(self):
             for cmd in self.commands:
                 if not cmd.isFinished:
                     return False
             return True
         
+        """Check if one the command is finished / RACE finish condition"""
         def oneCommandFinished(self):
             for cmd in self.commands:
                 if cmd.isFinished:
                     return True
             return False
         
+        """Override start in Command to also start its list of commands"""
         def start(self):
             self.hasStarted = True
+            self.isFinished = False
             Commands.runCommand(self)
             for cmd in self.commands:
                 cmd.start()
-            self.isFinished = False
 
+    """Holds a list of commands that are run in sequence, functions also as a command itself
+        Commands: list of commands to be run
+        Requirements: list of lambdas checked before running commands
+    """
     class commandSequence(Command):
         def __init__(self, commands=[], requirements=[]):
             super().__init__(lambda: self.runCommands(), requirements, [lambda: self.getIsFinished()])
@@ -648,57 +663,64 @@ try:
 
             for cmd in commands:
                 self.addRequirement(cmd.requirements)
-            
+        
+        """Function called as the action of the parent command class"""
         def runCommands(self):
             if  self.currentCommandIndex == 0 or self.commands[self.currentCommandIndex-1].isFinished:
                 self.commands[self.currentCommandIndex].start()
                 self.currentCommandIndex += 1
 
+        """Function passed in as a lambda for the finishCondition of the parrent command class"""
         def getIsFinished(self):
             return self.currentCommandIndex > len(self.commands)-1
 
+        """Add a command to the end of the list of commands"""
         def addCommand(self, command):
             self.commands.append(command)
             self.addRequirement(command.requirements)
 
+    """Class for external handling and running of commands"""
     class Commands:
         runningCommands = []
         commandsToRun = []
         commandsToRemove = []
         numCommands = 0
 
+        """Run commands and update running command"""
         def update():
+            # Add commands added on the last frame
             if len(Commands.commandsToRun) > 0:
                 Commands.runningCommands.extend(Commands.commandsToRun)
                 Commands.commandsToRun.clear()
 
+            # Remove commands removed on the last frame
             for cmd in Commands.commandsToRemove:
-            #    Commands.runningCommands.pop(Commands.runningCommands.index(cmd))
+
                 newArray = []
                 for cmd2 in Commands.runningCommands:
                     if cmd is not cmd2: newArray.append(cmd2)
                 Commands.runningCommands = newArray.copy()
-                
-                newArray = []
-                for cmd2 in Commands.commandsToRun:
-                    if cmd is not cmd2: newArray.append(cmd2)
-                Commands.commandsToRun = newArray.copy()
             
             Commands.commandsToRemove.clear()
 
+            # Run all commands 
             for cmd in Commands.runningCommands:
                 cmd.execute()                
         
+        """Add command to be run on the next frame"""
         def runCommand(Command):
             Commands.commandsToRun.append(Command)
         
+        """Remove a command from the running commands on the next frame"""
         def removeCommand(Command):
             Commands.commandsToRemove.append(Command)
         
+        """Get a command to wait x seconds"""
         def getWaitCommand(seconds):
             t = timer()
             return Command(lambda: Commands.doNothing(), [], [lambda: t.getElapsedTime() > seconds])
 
+        """Get a command to pass into a lambda to do nothing"""
         def doNothing():
             pass
 
