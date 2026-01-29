@@ -26,7 +26,8 @@ try:
     SPI1 = busio.SPI(board.GP10,MOSI=board.GP11,MISO=board.GP12) # SD Card
     CS1 = digitalio.DigitalInOut(board.GP13) # SD Card Chip Select
 
-    PWM0 = pwmio.PWMOut(board.GP27, frequency=48000, duty_cycle=0, variable_frequency=True) # Motor PWM
+    PWM0 = pwmio.PWMOut(board.GP27, frequency=48000, duty_cycle=0, variable_frequency=True) # Flywheel Motor PWM
+    PWM1 = pwmio.PWMOut(board.GP28) # Flywheel Servo Motor PWM
     
     I2C0 = busio.I2C(board.GP1,board.GP0,frequency=10000) # Altimeter, IMU, Magnometer, Power, Solar, Battery
     UART0 = busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10) # GPS
@@ -485,44 +486,76 @@ try:
             if self.brakeMode:
                 self.interface.frequency = 0.2            
         
+    class DirectorMotor(onboardDevice):
+        def __init__(self):
+            super().__init__()
+            # Define access point for Flywheel Motor
+            self.interface = PWM1
+            self.boardArgs = ["PWM", board.GP28]
+            self.brakeMode = False
+
+        """Spin the flywheel clockwise at a percent throttle"""
+        def spinClockwise(self, percentThrotle):
+            # 0.1 ms = 100% reverse throttle 0.2 ms = 100% throttle fwd
+            self.interface.frequency = 0.15+(percentThrotle / 100)/20
+
+        """Spin the flywheel counterClockwise at a percent throttle"""
+        def spinCounterClockwise(self, percentThrotle):
+            # 0.1 ms = 100% reverse throttle 0.2 ms = 100% throttle fwd
+            self.interface.frequency = 0.15-(percentThrotle / 100)/20
+            
+        """Set the brake mode of the flywheel motor"""
+        def setBrakeMode(self, value):
+            self.brakeMode = value
+            if self.brakeMode:
+                self.interface.frequency = 0.2            
+        
+        
+        
     """Helper class to control rotation of the cubesat"""
     class rotationControlSystem:
+        LEFT = True
+        RIGHT = False
         def __init__(self):
             self.isRotating = False
             self.rotatedDegrees = 0
             self.degreesToRotate = 0
             
         """Start rotating the cubesat a certain number of degrees"""
-        def startRotation(self, degreesToRotate):
+        def startRotation(self, degreesToRotate, direction):
             # Reset rotation tracking variables
             self.isRotating = True
             self.rotatedDegrees = 0
             flywheel.setBrakeMode(False)
             # Set target rotation
             self.degreesToRotate = degreesToRotate
+            
+            Commands.runCommand(Command(lambda: self.runRotation(), [], [lambda:self.getIsFinished()]).andThen(Command(lambda:self.stopRotation())))
+            
+            if direction == rotationControlSystem.LEFT:
+                Commands.runCommand(Command(lambda: director.spinClockwise()).andThen(Commands.getWaitCommand(1)).andThen(lambda: director.setBrakeMode(True)))
+            else:
+                Commands.runCommand(Command(lambda: director.spinCounterClockwise()).andThen(Commands.getWaitCommand(1)).andThen(lambda: director.setBrakeMode(True)))
         
         """Stop rotating the cubesat"""
         def stopRotation(self):
             self.isRotating = False
             flywheel.setBrakeMode(True)
         
+        def getIsFinished(self):
+            return self.rotatedDegrees > self.degreesToRotate
+        
         """Run rotation control loop, should be called in main loop"""
         def runRotation(self):
-            if self.isRotating:
-                # Gyro gives radians, convert to degrees
-                self.rotatedDegrees += 3.14 * (imu.interface.gyro[2]) / 180
-                
-                if self.rotatedDegrees >= self.degreesToRotate:
-                    self.stopRotation()
-                else:
-                    # Handle directionality
-                    if self.degreesToRotate > 0:
-                        # (100% - percent completed) = percent throttle
-                        flywheel.spinClockwise(((self.degreesToRotate - self.rotatedDegrees) / self.degreesToRotate) * 100)
-                    else:
-                        # (100% - percent completed) = percent throttle
-                        flywheel.spinCounterClockwise(((abs(self.degreesToRotate) - abs(self.rotatedDegrees)) / abs(self.degreesToRotate)) * 100)
-                
+            self.rotatedDegrees += 3.14 * (imu.interface.gyro[2]) / 180
+            # Handle directionality
+            if self.degreesToRotate > 0:
+                # (100% - percent completed) = percent throttle
+                flywheel.spinClockwise(((self.degreesToRotate - self.rotatedDegrees) / self.degreesToRotate) * 100)
+            else:
+                # (100% - percent completed) = percent throttle
+                flywheel.spinCounterClockwise(((abs(self.degreesToRotate) - abs(self.rotatedDegrees)) / abs(self.degreesToRotate)) * 100)
+        
     LAST = 1
     RACE = 2
     """Class to handle scheduled execution of an action"""
@@ -756,7 +789,6 @@ try:
         # allow for user to pass in a string to process
         
         if inString is not "None": receiveLED.turnOn()
-        else: return lambda: True
         
         # Format string to be more default and readable
         inString = inString.lower()
@@ -893,21 +925,12 @@ try:
                 else:
                     error("Command Not Understood")
             # Rotate the cube
-            elif inString[0:6] is "rotate":
-                inString = inString[6:]
-                if inString is "brake":
-                    rotationSystem.stopRotation()
-                    return lambda: not rotationSystem.isRotating
-                else:
-                    degreesToRotate = float(inString)   
-                    rotationSystem.startRotation(degreesToRotate)
-                    radio.sendString("Rotating "+str(degreesToRotate)+" Degrees")
-                    return lambda: not rotationSystem.isRotating
-            # Wait command
-            elif inString[0:4] is "wait":
-                waitTime = int(inString[4:])
-                commandTimer.reset()
-                return lambda: commandTimer.getElapsedTime() >= waitTime
+            elif inString[0:4] is "look":
+                inString = inString[4:]
+                direction = inString[0:1]
+                degreesToRotate = float(inString[1:])   
+                rotationSystem.startRotation(degreesToRotate, rotationControlSystem.LEFT if (direction is "l") else rotationControlSystem.RIGHT)
+                radio.sendString("Rotating "+str(degreesToRotate)+" Degrees to the " + "left" if (direction is "l") else "right")
             # Reset Cube
             elif inString[0:5] is "reset":
                 #config.saveConfig()
@@ -925,10 +948,8 @@ try:
             else:
                 error("Command Not Understood")
             
-            return lambda: True
         except:
             error("Failed To Interpret Command")  
-            return lambda: True # Returning false would lead to commands getting stuck in a loop 
        
     """Send data based on config toggles""" 
     def sendData():
@@ -988,6 +1009,7 @@ try:
     magnometer = Magnometer()
     power = Power()
     flywheel = FlywheelMotor()
+    director = DirectorMotor()
     rotationSystem = rotationControlSystem()
     sd = SDCard()
     # Load Data From Config
@@ -1017,7 +1039,6 @@ try:
         if abs(clock.monotonic()%clockTimer) == 0:
             processCommand(str(radio.readIncoming())) # Process incoming commands
             sendData() # Send any data that is toggled to be sent
-            rotationSystem.runRotation() # Run rotation control loop
             processLED.toggle() # Visualize clock cycle
             #receiveLED.turnOff() # Reset recieve LED
             errorLED.turnOff() # Reset error LED
