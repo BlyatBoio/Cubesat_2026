@@ -363,7 +363,7 @@ try:
                 self.interface = digitalio.DigitalInOut(self.boardPin)
                 self.interface.direction = digitalio.Direction.OUTPUT
                 self.boardArgs = ["Digital IO", self.boardPin, "Direction: Out"]
-                self.value = False;
+                self.value = False
                 self.isFunctional = True
             except:
                 self.isFunctional = False
@@ -530,6 +530,7 @@ try:
             self.cmdID = Commands.numCommands # ID used to determine if a command is the same
             Commands.numCommands += 1
             self.isFinished = False
+            self.hasStarted = False
 
             # Lambda functions checked every execution to ensure the command will function
             if not isinstance(requirements, list): self.requirements = [requirements]
@@ -569,6 +570,7 @@ try:
             return True
 
         def start(self):
+            self.hasStarted = True
             Commands.runCommand(self)
             self.isFinished = False
 
@@ -580,32 +582,43 @@ try:
         
         def andThen(self, Command):
             if isinstance(self, commandSequence): self.addCommand(Command)
-            else: self = commandSequence([self, Command])
+            else: 
+                self = commandSequence([self, Command])
+            return self
+        
+        def raceWith(self, Command):
+            if isinstance(self, parallelCommandSequence): self.addCommand(Command)
+            else: 
+                self = parallelCommandSequence([self, Command], [], RACE)
+            return self
+        
+        def runWith(self, Command):
+            if isinstance(self, parallelCommandSequence): self.addCommand(Command)
+            else: 
+                self = parallelCommandSequence([self, Command], [], LAST)
             return self
         
         """Stop the command from running"""
         def cancel(self):
             self.isFinished = True
+            self.hasStarted = False
             Commands.removeCommand(self)
 
     LAST = 1
     RACE = 2
     class parallelCommandSequence(Command):
         def __init__(self, commands=[], requirements=[], finishCondition=LAST):
-            super().__init__()
-
+            finishLam = lambda: self.oneCommandFinished()
+            if finishCondition == LAST: finishLam = lambda: self.allCommandsFinished()
+            super().__init__(lambda: Commands.doNothing(), requirements, [finishLam])
             self.commands = commands
-            self.requirements = requirements
-            self.action = lambda: self.runCommands()
-            self.finishConditions = []
-            
+
             for cmd in commands:
                 self.addRequirement(cmd.requirements)
-            
-            if finishCondition == LAST:
-                self.addFinishCondition(lambda: self.allCommandsFinished())
-            else:
-                self.addFinishCondition(lambda: self.oneCommandFinished())
+        
+        def addCommand(self, command):
+            self.commands.append(command)
+            self.addRequirement(command.requirements)
         
         def allCommandsFinished(self):
             for cmd in self.commands:
@@ -618,25 +631,23 @@ try:
                 if cmd.isFinished:
                     return True
             return False
-
-        def runCommands(self):
-            for cmd in self.commandsToStart:
-                if not (Commands.runningCommands.__contains__(cmd) or Commands.commandsToRun.__contains__(cmd)): 
-                    cmd.start()
+        
+        def start(self):
+            self.hasStarted = True
+            Commands.runCommand(self)
+            for cmd in self.commands:
+                cmd.start()
+            self.isFinished = False
 
     class commandSequence(Command):
         def __init__(self, commands=[], requirements=[]):
-            super().__init__()
+            super().__init__(lambda: self.runCommands(), requirements, [lambda: self.getIsFinished()])
             
             self.commands = commands
-            self.requirements = requirements
-            self.action = lambda: self.runCommands()
             self.currentCommandIndex = 0
-            self.finishConditions = []
+
             for cmd in commands:
                 self.addRequirement(cmd.requirements)
-            
-            self.addFinishCondition((lambda: self.getIsFinished()))
             
         def runCommands(self):
             if  self.currentCommandIndex == 0 or self.commands[self.currentCommandIndex-1].isFinished:
@@ -659,19 +670,24 @@ try:
         def update():
             if len(Commands.commandsToRun) > 0:
                 Commands.runningCommands.extend(Commands.commandsToRun)
-                Commands.commandsToTun = []
+                Commands.commandsToRun.clear()
 
             for cmd in Commands.commandsToRemove:
             #    Commands.runningCommands.pop(Commands.runningCommands.index(cmd))
                 newArray = []
                 for cmd2 in Commands.runningCommands:
-                    if cmd is not cmd2:
-                        newArray.append(cmd2)
-                Commands.runningCommands = newArray
+                    if cmd is not cmd2: newArray.append(cmd2)
+                Commands.runningCommands = newArray.copy()
+                
+                newArray = []
+                for cmd2 in Commands.commandsToRun:
+                    if cmd is not cmd2: newArray.append(cmd2)
+                Commands.commandsToRun = newArray.copy()
+            
+            Commands.commandsToRemove.clear()
 
             for cmd in Commands.runningCommands:
-                cmd.execute()
-                
+                cmd.execute()                
         
         def runCommand(Command):
             Commands.commandsToRun.append(Command)
@@ -965,10 +981,13 @@ try:
     radio.sendString("Cubesat Initialized")
 
     #testCommand = Command(lambda:transmitLED.turnOn()).andThen(Commands.getWaitCommand(2)).andThen(Command(lambda:transmitLED.turnOff()))
-    testCommand = parallelCommandSequence([Command(lambda:transmitLED.turnOn()), Command(lambda:receiveLED.turnOn())])
-    testCommand.andThen(Commands.getWaitCommand(2))
-    testCommand.andThen(parallelCommandSequence([Command(lambda:transmitLED.turnOff()), Command(lambda:receiveLED.turnOff())]))
-    Commands.runCommand(testCommand)
+    testCommand = Command(lambda: transmitLED.turnOn())
+    testCommand = testCommand.runWith(Command(lambda: receiveLED.turnOn()))
+    testCommand = testCommand.andThen(Commands.getWaitCommand(1))
+    testCommand = testCommand.andThen(Command(lambda: transmitLED.turnOff()).runWith(Command(lambda: receiveLED.turnOff())))
+    testCommand = testCommand.andThen(Commands.getWaitCommand(1))
+    
+    testCommand.start()
 
     while True:
         Commands.update()
@@ -978,7 +997,7 @@ try:
             sendData() # Send any data that is toggled to be sent
             rotationSystem.runRotation() # Run rotation control loop
             processLED.toggle() # Visualize clock cycle
-            receiveLED.turnOff() # Reset recieve LED
+            #receiveLED.turnOff() # Reset recieve LED
             errorLED.turnOff() # Reset error LED
             pingTimer += 1 # Incriment Ping Timer
 except:
