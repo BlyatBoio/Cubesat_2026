@@ -26,7 +26,6 @@ try:
     SPI1 = busio.SPI(board.GP10,MOSI=board.GP11,MISO=board.GP12) # SD Card
     CS1 = digitalio.DigitalInOut(board.GP13) # SD Card Chip Select
 
-    PWM0 = pwmio.PWMOut(board.GP27, frequency=48000, duty_cycle=0, variable_frequency=True) # Flywheel Motor PWM
     PWM1 = pwmio.PWMOut(board.GP28) # Flywheel Servo Motor PWM
     
     I2C0 = busio.I2C(board.GP1,board.GP0,frequency=10000) # Altimeter, IMU, Magnometer, Power, Solar, Battery
@@ -463,28 +462,34 @@ try:
     """Interface class for the Flywheel Motor"""
     class FlywheelMotor(onboardDevice):
         def __init__(self):
-
             super().__init__()
             # Define access point for Flywheel Motor
-            self.interface = PWM0
-            self.boardArgs = ["PWM", board.GP27, "frequency: 48000", "duty_cycle: 0", "variable_frequency: True"]
+            self.interface = pwmio.PWMOut(board.GP27, frequency=500, duty_cycle=2**15, variable_frequency=True)
+            self.boardArgs = ["PWM", board.GP27, "frequency: 50", "duty_cycle: 2**15", "variable_frequency: True"]
             self.brakeMode = False
+            self.frequency = 50
+            self.duty_cycle = 2**15
 
-        """Spin the flywheel clockwise at a percent throttle"""
-        def spinClockwise(self, percentThrotle):
-            # 0.1 ms = 100% reverse throttle 0.2 ms = 100% throttle fwd
-            self.interface.frequency = 0.15+(percentThrotle / 100)/20
+        def setPinOutputCommand(self, frequency=1000, dutyCycle=2**15):
+            return Command(lambda: self.resetPWM()).andThen(Commands.getWaitCommand(1)).andThen(Command(lambda: self.setFrequency(frequency)).alongWith(Command(lambda: self.setDutyCycle(dutyCycle))).alongWith(Command(lambda: self.updateInterface())))
 
-        """Spin the flywheel counterClockwise at a percent throttle"""
-        def spinCounterClockwise(self, percentThrotle):
-            # 0.1 ms = 100% reverse throttle 0.2 ms = 100% throttle fwd
-            self.interface.frequency = 0.15-(percentThrotle / 100)/20
+        def setFrequency(self, frequencyIn):
+            self.frequency = frequencyIn
+
+        def setDutyCycle(self, dutyCycleIn):
+            self.frequency = dutyCycleIn
+        
+        def resetPWM(self):
+            self.interface.deinit()
+        
+        def updateInterface(self):
+            self.interface = pwmio.PWMOut(board.GP27, frequency=self.frequency, duty_cycle=self.duty_cycle, variable_frequency=True)
             
-        """Set the brake mode of the flywheel motor"""
-        def setBrakeMode(self, value):
-            self.brakeMode = value
-            if self.brakeMode:
-                self.interface.frequency = 0.2            
+        def stopMotorCommand(self):
+            return self.setPinOutputCommand(1000)
+
+        def initMotor(self):
+            return self.setPinOutputCommand(500).andThen(Commands.getWaitCommand(1)).andThen(Command(lambda: self.stopMotorCommand()))
         
     class DirectorMotor(onboardDevice):
         def __init__(self):
@@ -509,8 +514,6 @@ try:
             self.brakeMode = value
             if self.brakeMode:
                 self.interface.frequency = 0.2            
-        
-        
         
     """Helper class to control rotation of the cubesat"""
     class rotationControlSystem:
@@ -1019,19 +1022,21 @@ try:
     # Timing Intervals
     clockTimer = 2
     pingTimer = 1
-
+    
     # Visual startup
     startupLightshow()
     radio.sendString("Cubesat Initialized")
-
-    #testCommand = Command(lambda:transmitLED.turnOn()).andThen(Commands.getWaitCommand(2)).andThen(Command(lambda:transmitLED.turnOff()))
-    testCommand = Command(lambda: transmitLED.turnOn())
-    testCommand = testCommand.runWith(Command(lambda: receiveLED.turnOn()))
-    testCommand = testCommand.andThen(Commands.getWaitCommand(1))
-    testCommand = testCommand.andThen(Command(lambda: transmitLED.turnOff()).runWith(Command(lambda: receiveLED.turnOff())))
-    testCommand = testCommand.andThen(Commands.getWaitCommand(1))
     
-    testCommand.start()
+    flywheel.initMotor().andThen(Commands.getWaitCommand(1)).andThen(flywheel.setPinOutputCommand(50)).andThen(Commands.getWaitCommand(5)).andThen(flywheel.stopMotorCommand()).start()
+    
+    #testCommand = Command(lambda:transmitLED.turnOn()).andThen(Commands.getWaitCommand(2)).andThen(Command(lambda:transmitLED.turnOff()))
+    #testCommand = Command(lambda: transmitLED.turnOn())
+    #testCommand = testCommand.runWith(Command(lambda: receiveLED.turnOn()))
+    #testCommand = testCommand.andThen(Commands.getWaitCommand(1))
+    #testCommand = testCommand.andThen(Command(lambda: transmitLED.turnOff()).runWith(Command(lambda: receiveLED.turnOff())))
+    #testCommand = testCommand.andThen(Commands.getWaitCommand(1))
+    
+    #testCommand.start()
 
     while True:
         Commands.update()
