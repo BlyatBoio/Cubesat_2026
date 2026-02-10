@@ -226,6 +226,8 @@ try:
         except:
             error("Error Decoding Packet")
 
+    log("THIS IS A TEST")
+
     radioConnectThread = threading.Thread(target=connectRadio)
     commandRunnerThread = threading.Thread(target=runCommandInput)
     radioInputThread = threading.Thread(target=runRadioReciever)
@@ -250,9 +252,9 @@ try:
             # Show the Application
             self.show()
 
-    #app = QApplication(sys.argv)
-    #UIWindow = UI()
-    #app.exec_()
+    app = QApplication(sys.argv)
+    UIWindow = UI()
+    app.exec_()
             
 
 except Exception as e:
