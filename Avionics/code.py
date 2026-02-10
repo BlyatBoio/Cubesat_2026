@@ -1,6 +1,8 @@
 import board
 import busio
 import pwmio
+import math
+import random
 import storage
 import analogio
 import digitalio
@@ -21,25 +23,31 @@ from adafruit_ina219 import ADCResolution, BusVoltageRange, INA219
 
 try:
     # Define bord access points
-    SPI1 = busio.SPI(board.GP10,MOSI=board.GP11,MISO=board.GP12)
-    CS1 = digitalio.DigitalInOut(board.GP13)
-    
-    I2C0 = busio.I2C(board.GP1,board.GP0,frequency=10000)
-    UART0 = busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10)
+    SPI1 = busio.SPI(board.GP10,MOSI=board.GP11,MISO=board.GP12) # SD Card
+    CS1 = digitalio.DigitalInOut(board.GP13) # SD Card Chip Select
 
+    PWM1 = pwmio.PWMOut(board.GP28) # Flywheel Servo Motor PWM
+    
+    I2C0 = busio.I2C(board.GP1,board.GP0,frequency=10000) # Altimeter, IMU, Magnometer, Power, Solar, Battery
+    UART0 = busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10) # GPS
+    
+    """Simple parent class handling onboard devices"""
     class onboardDevice:
         def __init__(self):
-            self.isFunctional = None
+            self.isFunctional = None # Set manually case by case in each class
             self.boardArgs = []
         
+        """Get a string representation of the arguments passed to the device"""
         def getBoardArgs(self):
             rString = ""
             for i in range(0, len(self.boardArgs)):
                 rString += self.boardArgs + "\n"
             return rString
 
+    """Class To Store, Load and Save Config Data"""
     class cubesatConfig:
         def __init__(self):
+            # Define default config values
             self.doSendGps = False
             self.doSendAlt = False
             self.doSendImu = False
@@ -48,6 +56,7 @@ try:
             self.doPing = False
             self.pingInterval = 1
             
+        """Load Config From SD Card"""
         def loadConfig(self):
             global sd
             radio.sendString("Loading Config")
@@ -60,6 +69,8 @@ try:
                 with open(sd.configPath, "r") as configFile:
                     newConfig = configFile.readlines()
 
+                    # Each line is an index up,
+                    # Each line has either t or f representing true or fase
                     if len(newConfig) == 0: 
                         error("Config File Is Empty")
                     else:
@@ -74,12 +85,14 @@ try:
             except:
                 error("Failed To Load Configuration")
         
+        """Save Config To SD Card"""
         def saveConfig(self):
             
             if not sd.isFunctional:
                 radio.sendString("Failed To Save Config, SD Not Functional")
                 return
             
+            # Sepparate each line by \n so .readLines can sepparate each value easily
             try:
                 with open(sd.configPath, "w") as configFile:
                     configFile.write(
@@ -95,6 +108,7 @@ try:
             except:
                 radio.sendString("Failed To Save Config")
         
+    """Interface class for the SD Card"""
     class SDCard(onboardDevice):
         def __init__(self):
             try:
@@ -110,22 +124,30 @@ try:
                 # Define file paths
                 self.configPath = "/sd/config.txt"
                 self.errorPath = "/sd/error.txt"
+                self.dataPath = "/sd/data.txt"
                 
                 # Open Files
                 with open(self.configPath, "w") as file:
                     pass
                 with open(self.errorPath, "w") as file:
                     pass
+                with open(self.dataPath, "w") as file:
+                    pass
 
+                # Write default config to config file
                 self.writeToFile(self.configPath, "f\nf\nf\nf\nf\n1")
                 self.isFunctional = True
             except:
                 self.isFunctional = False
                 radio.sendString("Failed To Initialize SD Card")
 
+        """Write a string to a file on the SD Card
+            FilePath: Path to file on SD Card
+            String: String to write to file
+        """
         def writeToFile(self, filePath, string):
             try:
-                self.isFunctional = True
+                self.isFunctional = True # If it cant write a file, this value will be reset to false
 
                 with open(filePath, "w") as writeFile:
                     writeFile.write(string)
@@ -133,6 +155,7 @@ try:
                 self.isFunctional = False
                 radio.sendString("Failed To Write To SD Card")
              
+    """Interface class for the GPS"""
     class GPS(onboardDevice):
         def __init__(self):
             try:
@@ -149,6 +172,7 @@ try:
                 self.isFunctional = False
                 error("Failed To Setup GPS" )
         
+        """Get data from the GPS formatted as for the groundstation"""
         def getData(self):
             try:
                 self.isFunctional = True
@@ -168,6 +192,7 @@ try:
                 self.isFunctional = False
                 return "err Failed To Send GPS Data"
 
+    """Interface class for the Altimeter"""
     class Altimeter(onboardDevice):
         def __init__(self):
             try:
@@ -185,6 +210,7 @@ try:
                 self.isFunctional = False
                 error("Failed To Setup Altimeter ")
         
+        """Get data from the Altimeter formatted as for the groundstation"""
         def getData(self):
             try:
                 self.isFunctional = True
@@ -200,6 +226,7 @@ try:
                 self.isFunctional = False
                 return "err Failed To Send Altimeter Data"
                 
+    """Interface class for the IMU"""
     class IMU(onboardDevice):
         def __init__(self):
             try:
@@ -211,6 +238,8 @@ try:
             except:
                 self.isFunctional = False
                 error("Failed To Setup IMU ")
+
+        """Get data from the IMU formatted as for the groundstation"""
         def getData(self):
             try:
                 self.isFunctional = True
@@ -227,6 +256,7 @@ try:
                 self.isFunctional = False
                 return "err Failed To Send IMU Data"
                 
+    """Interface class for the Magnometer"""
     class Magnometer(onboardDevice):
         def __init__(self):
             try:
@@ -238,6 +268,8 @@ try:
             except:
                 self.isFunctional = False
                 error("Failed To Setup Magnometer ")
+        
+        """Get data from the Magnometer formatted as for the groundstation"""
         def getData(self):
             try:
                 self.isFunctional = True
@@ -251,30 +283,33 @@ try:
                 self.isFunctional = False
                 return "err Failed To Send Magnometer Data"
                 
+    """Interface class for the Power"""
     class Power(onboardDevice):
         def __init__(self):
             try:
                 super().__init__()
                 # Define access point for Power Draw Data
-                self.powerDrawInterface = INA219(I2C0,addr=0x45)
-                self.boardArgs = [I2C0, "Address: 0x45"]
+                #self.powerDrawInterface = INA219(I2C0,addr=0x45)
+                #self.boardArgs = [I2C0, "Address: 0x45"]
 
                 # Set default parameters for the interface
-                self.powerDrawInterface.bus_adc_resolution = ADCResolution.ADCRES_12BIT_32S
-                self.powerDrawInterface.shunt_adc_resolution = ADCResolution.ADCRES_12BIT_32S
-                self.powerDrawInterface.bus_voltage_range = BusVoltageRange.RANGE_16V
+                #self.powerDrawInterface.bus_adc_resolution = ADCResolution.ADCRES_12BIT_32S
+                ##self.powerDrawInterface.shunt_adc_resolution = ADCResolution.ADCRES_12BIT_32S
+                #self.powerDrawInterface.bus_voltage_range = BusVoltageRange.RANGE_16V
                 
                 # Define access point for Solar Data
-                self.solar1Inteface = Solar(0x40)
-                self.solar2Inteface = Solar(0x41)
-                self.solar3Inteface = Solar(0x44)
+                #self.solar1Inteface = Solar(0x40)
+                #self.solar2Inteface = Solar(0x41)
+                #self.solar3Inteface = Solar(0x44)
                 
                 # Define access point for Batery Data
-                self.batteryInterface = adafruit_max1704x.MAX17048(I2C0,address=0x36)
-                self.isFunctional = True
+                #self.batteryInterface = adafruit_max1704x.MAX17048(I2C0,address=0x36)
+                self.isFunctional = False
             except:
                 self.isFunctional = False
                 error("Failed To Setup Power ")
+        
+        """Get data from the Power formatted as for the groundstation"""
         def getData(self):
             try:
                 self.isFunctional = True
@@ -300,6 +335,7 @@ try:
                 self.isFunctional = False
                 return "err Failed To Send Power Data"
 
+    """Interface class for the Solar"""
     class Solar(onboardDevice):
         def __init__(self, address):
             try:
@@ -317,6 +353,7 @@ try:
                 self.isFunctional = False
                 error("Failed To Setup Solar ")
     
+    """Interface class for the LEDS"""
     class LED(onboardDevice):
         def __init__(self, boardPin):
             try:
@@ -326,12 +363,13 @@ try:
                 self.interface = digitalio.DigitalInOut(self.boardPin)
                 self.interface.direction = digitalio.Direction.OUTPUT
                 self.boardArgs = ["Digital IO", self.boardPin, "Direction: Out"]
-                self.value = False;
+                self.value = False
                 self.isFunctional = True
             except:
                 self.isFunctional = False
                 error("Failed To Setup LED ")
     
+        """Turn On the LED"""
         def turnOn(self):
             try:
                 self.isFunctional = True
@@ -341,6 +379,7 @@ try:
                 self.isFunctional = False
                 error("Failed To Turn On LED ")
         
+        """Turn Off the LED"""
         def turnOff(self):
             try:
                 self.isFunctional = True
@@ -350,6 +389,7 @@ try:
                 self.isFunctional = False
                 error("Failed To Turn Off LED ")
 
+        """Toggle the LED"""
         def toggle(self):
             try:
                 self.isFunctional = True
@@ -359,6 +399,7 @@ try:
                 self.isFunctional = False
                 error("Failed To Toggle LED ")
         
+    """Interface class for the Tranciever"""
     class Tranciever(onboardDevice):
         def __init__(self):
             try:
@@ -382,6 +423,7 @@ try:
                 self.isFunctional = False
                 error("Failed To Setup Tranciever ")
 
+        """Send a string via the Tranciever"""
         def sendString(self, string):
             try:
                 self.isFunctional = True
@@ -389,6 +431,8 @@ try:
             except:
                 self.isFunctional = False
                 error("Failed To Send String ")
+                
+        """Send an error string via the Tranciever"""
         def sendError(self, string):
             try:
                 self.isFunctional = True
@@ -396,6 +440,8 @@ try:
             except:
                 self.isFunctional = False
                 error("Failed To Send Error ")
+        
+        """Send bytes via the Tranciever"""
         def sendBytes(self, bytes):
             try:
                 self.isFunctional = True
@@ -403,6 +449,8 @@ try:
             except:
                 self.isFunctional = False
                 error("Failed To Send Bytes ")
+                
+        """Read incoming data from the Tranciever"""
         def readIncoming(self):
             try:
                 self.isFunctional = True
@@ -410,19 +458,340 @@ try:
             except:
                 self.isFunctional = False
                 error("Failed To Read Incoming Data ")
-    
+
+    """Interface class for the Flywheel Motor"""
+    class FlywheelMotor(onboardDevice):
+        def __init__(self):
+            super().__init__()
+            # Define access point for Flywheel Motor
+            self.interface = pwmio.PWMOut(board.GP27, frequency=500, duty_cycle=2**15, variable_frequency=True)
+            self.boardArgs = ["PWM", board.GP27, "frequency: 50", "duty_cycle: 2**15", "variable_frequency: True"]
+            self.brakeMode = False
+            self.frequency = 50
+            self.duty_cycle = 2**15
+
+        def setPinOutputCommand(self, frequency=1000, dutyCycle=2**15):
+            return Command(lambda: self.resetPWM()).andThen(Commands.getWaitCommand(1)).andThen(Command(lambda: self.setFrequency(frequency)).alongWith(Command(lambda: self.setDutyCycle(dutyCycle))).alongWith(Command(lambda: self.updateInterface())))
+
+        def setFrequency(self, frequencyIn):
+            self.frequency = frequencyIn
+
+        def setDutyCycle(self, dutyCycleIn):
+            self.frequency = dutyCycleIn
+        
+        def resetPWM(self):
+            self.interface.deinit()
+        
+        def updateInterface(self):
+            self.interface = pwmio.PWMOut(board.GP27, frequency=self.frequency, duty_cycle=self.duty_cycle, variable_frequency=True)
+            
+        def stopMotorCommand(self):
+            return self.setPinOutputCommand(1000)
+
+        def initMotor(self):
+            return self.setPinOutputCommand(500).andThen(Commands.getWaitCommand(1)).andThen(Command(lambda: self.stopMotorCommand()))
+        
+    class DirectorMotor(onboardDevice):
+        def __init__(self):
+            super().__init__()
+            # Define access point for Flywheel Motor
+            self.interface = PWM1
+            self.boardArgs = ["PWM", board.GP28]
+            self.brakeMode = False
+
+        """Spin the flywheel clockwise at a percent throttle"""
+        def spinClockwise(self, percentThrotle):
+            # 0.1 ms = 100% reverse throttle 0.2 ms = 100% throttle fwd
+            self.interface.frequency = 0.15+(percentThrotle / 100)/20
+
+        """Spin the flywheel counterClockwise at a percent throttle"""
+        def spinCounterClockwise(self, percentThrotle):
+            # 0.1 ms = 100% reverse throttle 0.2 ms = 100% throttle fwd
+            self.interface.frequency = 0.15-(percentThrotle / 100)/20
+            
+        """Set the brake mode of the flywheel motor"""
+        def setBrakeMode(self, value):
+            self.brakeMode = value
+            if self.brakeMode:
+                self.interface.frequency = 0.2            
+        
+    """Helper class to control rotation of the cubesat"""
+    class rotationControlSystem:
+        LEFT = True
+        RIGHT = False
+        def __init__(self):
+            self.isRotating = False
+            self.rotatedDegrees = 0
+            self.degreesToRotate = 0
+            
+        """Start rotating the cubesat a certain number of degrees"""
+        def startRotation(self, degreesToRotate, direction):
+            # Reset rotation tracking variables
+            self.isRotating = True
+            self.rotatedDegrees = 0
+            flywheel.setBrakeMode(False)
+            # Set target rotation
+            self.degreesToRotate = degreesToRotate
+            
+            Commands.runCommand(Command(lambda: self.runRotation(), [], [lambda:self.getIsFinished()]).andThen(Command(lambda:self.stopRotation())))
+            
+            if direction == rotationControlSystem.LEFT:
+                Commands.runCommand(Command(lambda: director.spinClockwise()).andThen(Commands.getWaitCommand(1)).andThen(lambda: director.setBrakeMode(True)))
+            else:
+                Commands.runCommand(Command(lambda: director.spinCounterClockwise()).andThen(Commands.getWaitCommand(1)).andThen(lambda: director.setBrakeMode(True)))
+        
+        """Stop rotating the cubesat"""
+        def stopRotation(self):
+            self.isRotating = False
+            flywheel.setBrakeMode(True)
+        
+        def getIsFinished(self):
+            return self.rotatedDegrees > self.degreesToRotate
+        
+        """Run rotation control loop, should be called in main loop"""
+        def runRotation(self):
+            self.rotatedDegrees += 3.14 * (imu.interface.gyro[2]) / 180
+            # Handle directionality
+            if self.degreesToRotate > 0:
+                # (100% - percent completed) = percent throttle
+                flywheel.spinClockwise(((self.degreesToRotate - self.rotatedDegrees) / self.degreesToRotate) * 100)
+            else:
+                # (100% - percent completed) = percent throttle
+                flywheel.spinCounterClockwise(((abs(self.degreesToRotate) - abs(self.rotatedDegrees)) / abs(self.degreesToRotate)) * 100)
+        
+    LAST = 1
+    RACE = 2
+    """Class to handle scheduled execution of an action"""
+    class Command:
+        def __init__(self, action=lambda:Commands.doNothing(), requirements=[], finishConditions=[lambda:True]):
+            self.action = action #Lambda statement to be called in execute
+            self.cmdID = Commands.numCommands # ID used to determine if a command is the same
+            Commands.numCommands += 1
+            self.isFinished = False
+            self.hasStarted = False
+
+            # Lambda functions checked every execution to ensure the command will function
+            if not isinstance(requirements, list): self.requirements = [requirements]
+            else: self.requirements = requirements 
+            
+            # Lambda functions checked every execution to determine whether the command is finished or not
+            if not isinstance(finishConditions, list): self.finishConditions = [finishConditions] 
+            else: self.finishConditions = finishConditions
+        
+        def __eq__(self, other):
+            return self.cmdID == other.cmdID
+        
+        """Add a requirement to be checked before the command is executed"""
+        def addRequirement(self, requirement):
+            if isinstance(requirement, list): self.requirements.extend(requirement) # Append a list
+            else: self.requirements.append(requirement)
+
+        """Add a condition that will prevent the command from being finished until it returns true"""
+        def addFinishCondition(self, condition):
+            if isinstance(condition, list): self.finishConditions.extend(condition) # Append a list
+            else: self.finishConditions.append(condition)
+
+        """Check every requirement and return if they are all met"""
+        def checkRequirements(self):
+            # if there are no requirements, return true
+            if len(self.requirements) == 0: 
+                return True
+            
+            # Check all requirements
+            for requirement in self.requirements:
+                if (not requirement()):
+                    return False
+            return True
+
+        """Check every finish condition and return if they are all met"""
+        def checkFinishConditions(self):
+            for condition in self.finishConditions:
+                if not condition():
+                    return False
+            return True
+
+        """Start the command"""
+        def start(self):
+            self.hasStarted = True
+            self.isFinished = False
+            Commands.runCommand(self)
+
+        """Perform the action and handle requirements and finish conditions"""
+        def execute(self):
+            if self.checkRequirements():
+                self.action()
+                if self.checkFinishConditions(): self.cancel()
+        
+        """Add a command to be run once this command finishes"""
+        def andThen(self, Command):
+            if isinstance(self, commandSequence): self.addCommand(Command)
+            else: self = commandSequence([self, Command])
+            return self
+        
+        """Add a command to be run along side this command and end both commands when the first finishes"""
+        def raceWith(self, Command):
+            if isinstance(self, parallelCommandSequence): self.addCommand(Command)
+            else: self = parallelCommandSequence([self, Command], [], RACE)
+            return self
+        
+        """Add a command to be run along side this command"""
+        def runWith(self, Command):
+            if isinstance(self, parallelCommandSequence): self.addCommand(Command)
+            else: self = parallelCommandSequence([self, Command], [], LAST)
+            return self
+        
+        """Stop the command from running"""
+        def cancel(self):
+            self.isFinished = True
+            self.hasStarted = False
+            Commands.removeCommand(self)
+
+    """List of commands run in parallel"""
+    class parallelCommandSequence(Command):
+        def __init__(self, commands=[], requirements=[], finishCondition=LAST):
+            # Define end condition
+            finishLam = lambda: self.oneCommandFinished()
+            if finishCondition == LAST: finishLam = lambda: self.allCommandsFinished() 
+            
+            super().__init__(lambda: Commands.doNothing(), requirements, [finishLam]) # Initialzie parent command class
+            self.commands = commands
+
+            for cmd in commands:
+                self.addRequirement(cmd.requirements)
+        
+        """Add a command to be run in parallel"""
+        def addCommand(self, command):
+            self.commands.append(command)
+            self.addRequirement(command.requirements)
+        
+        """Check if all the commands are finished / LAST finish condition"""
+        def allCommandsFinished(self):
+            for cmd in self.commands:
+                if not cmd.isFinished:
+                    return False
+            return True
+        
+        """Check if one the command is finished / RACE finish condition"""
+        def oneCommandFinished(self):
+            for cmd in self.commands:
+                if cmd.isFinished:
+                    return True
+            return False
+        
+        """Override start in Command to also start its list of commands"""
+        def start(self):
+            self.hasStarted = True
+            self.isFinished = False
+            Commands.runCommand(self)
+            for cmd in self.commands:
+                cmd.start()
+
+    """Holds a list of commands that are run in sequence, functions also as a command itself
+        Commands: list of commands to be run
+        Requirements: list of lambdas checked before running commands
+    """
+    class commandSequence(Command):
+        def __init__(self, commands=[], requirements=[]):
+            super().__init__(lambda: self.runCommands(), requirements, [lambda: self.getIsFinished()])
+            
+            self.commands = commands
+            self.currentCommandIndex = 0
+
+            for cmd in commands:
+                self.addRequirement(cmd.requirements)
+        
+        """Function called as the action of the parent command class"""
+        def runCommands(self):
+            if  self.currentCommandIndex == 0 or self.commands[self.currentCommandIndex-1].isFinished:
+                self.commands[self.currentCommandIndex].start()
+                self.currentCommandIndex += 1
+
+        """Function passed in as a lambda for the finishCondition of the parrent command class"""
+        def getIsFinished(self):
+            return self.currentCommandIndex > len(self.commands)-1
+
+        """Add a command to the end of the list of commands"""
+        def addCommand(self, command):
+            self.commands.append(command)
+            self.addRequirement(command.requirements)
+
+    """Class for external handling and running of commands"""
+    class Commands:
+        runningCommands = []
+        commandsToRun = []
+        commandsToRemove = []
+        numCommands = 0
+
+        """Run commands and update running command"""
+        def update():
+            # Add commands added on the last frame
+            if len(Commands.commandsToRun) > 0:
+                Commands.runningCommands.extend(Commands.commandsToRun)
+                Commands.commandsToRun.clear()
+
+            # Remove commands removed on the last frame
+            for cmd in Commands.commandsToRemove:
+
+                newArray = []
+                for cmd2 in Commands.runningCommands:
+                    if cmd is not cmd2: newArray.append(cmd2)
+                Commands.runningCommands = newArray.copy()
+            
+            Commands.commandsToRemove.clear()
+
+            # Run all commands 
+            for cmd in Commands.runningCommands:
+                cmd.execute()                
+        
+        """Add command to be run on the next frame"""
+        def runCommand(Command):
+            Commands.commandsToRun.append(Command)
+        
+        """Remove a command from the running commands on the next frame"""
+        def removeCommand(Command):
+            Commands.commandsToRemove.append(Command)
+        
+        """Get a command to wait x seconds"""
+        def getWaitCommand(seconds):
+            t = timer()
+            return Command(lambda: Commands.doNothing(), [], [lambda: t.getElapsedTime() > seconds])
+
+        """Get a command to pass into a lambda to do nothing"""
+        def doNothing():
+            pass
+
+    """Simple timer class"""
+    class timer:
+        def __init__(self):
+            self.startTime = clock.monotonic()
+        
+        """Reset the timer to 0"""
+        def reset(self):
+            self.startTime = clock.monotonic()
+        
+        """Get the elapsed time since the last reset"""
+        def getElapsedTime(self):
+            return clock.monotonic() - self.startTime
+        
+    """Send an error via radio and log it to the SD Card"""
     def error(errorMessage):
         sd.writeToFile(sd.errorPath, errorMessage)
         radio.sendError(errorMessage)
         errorLED.turnOn()
     
-    def processCommand():
-        # read the recieved data from the radio
-        inString = str(radio.readIncoming())
+    """Save a value to the SD Card"""
+    def saveValue(label, value):
+        if sd.isFunctional: 
+            sd.writeToFile(sd.dataPath, label + ": " + value)
+        else:
+            error("SD Is Not Functional, Could Not Save Value")
+
+    """Process a command string incoming or internally generated"""
+    def processCommand(inString):
+        # read the recieved data from the radio by default
+        # allow for user to pass in a string to process
         
-        # if there is a command, toggle LED and continue
         if inString is not "None": receiveLED.turnOn()
-        else: return
         
         # Format string to be more default and readable
         inString = inString.lower()
@@ -434,6 +803,7 @@ try:
             # Ping the cube for a response
             if inString[0:4] is "ping":
                 radio.sendString("pong")
+            # Set data 
             elif inString[0:3] is "set":
                 inString = inString[3:]
 
@@ -493,7 +863,6 @@ try:
                     errorLED.toggle()
                 else:
                     error("Command Not Understood")
-
             # get different data
             elif inString[0:3] is "get":
                 inString = inString[3:]
@@ -522,6 +891,20 @@ try:
                         "Send Pow:"+str(config.doSendPow)+"\n"+
                         "Send Ping:"+str(config.doPing)+"\n"+
                         "Ping Interval:"+str(config.pingInterval)+"\n")
+                elif inString[0:4] is "data":
+                    inString = inString[4:]
+                    if inString[0:3] is "gps":
+                        radio.sendString(str(gps.getData()))
+                    elif inString[0:3] is "alt":
+                        radio.sendString(str(altimeter.getData()))
+                    elif inString[0:3] is "imu":
+                        radio.sendString(str(imu.getData()))
+                    elif inString[0:3] is "mag":
+                        radio.sendString(str(magnometer.getData()))
+                    elif inString[0:3] is "pow":
+                        radio.sendString(str(power.getData()))
+                    else:
+                        error("Command Not Understood")
                 # Similar to ping but funner to type
                 elif inString[0:4] is "cube":
                     inString = inString[4:]
@@ -529,22 +912,49 @@ try:
                         radio.sendString("Alive")
                 else:
                     error("Command Not Understood")
-            
+            # Save different data to SD Card            
+            elif inString[0:4] is "save":
+                inString = inString[4:]
+                if inString[0:3] is "gps":
+                    saveValue("GPS Save", str(gps.getData()))
+                elif inString[0:3] is "alt":
+                    saveValue("Altimeter Save", str(altimeter.getData()))
+                elif inString[0:3] is "imu":
+                    saveValue("IMU Save", str(imu.getData()))
+                elif inString[0:3] is "mag":
+                    saveValue("Magnometer Save", str(magnometer.getData()))
+                elif inString[0:3] is "pow":
+                    saveValue("Power Save", str(power.getData()))
+                else:
+                    error("Command Not Understood")
+            # Rotate the cube
+            elif inString[0:4] is "look":
+                inString = inString[4:]
+                direction = inString[0:1]
+                degreesToRotate = float(inString[1:])   
+                rotationSystem.startRotation(degreesToRotate, rotationControlSystem.LEFT if (direction is "l") else rotationControlSystem.RIGHT)
+                radio.sendString("Rotating "+str(degreesToRotate)+" Degrees to the " + "left" if (direction is "l") else "right")
             # Reset Cube
             elif inString[0:5] is "reset":
                 #config.saveConfig()
                 radio.sendString("Reseting...")
                 microcontroller.reset()
-            
             # Toggle lightshow
             elif inString[0:9] is "runlights":
                 startupLightshow()
+            #Evaluate arbitrary code
+            elif inString[0:4] is "eval":
+                try:
+                    eval(inString[4:])
+                except:
+                    error("Failed To Evaluate Command")
             else:
                 error("Command Not Understood")
             
         except:
-            error("Failed To Interpret Command")        
-        
+            error("Failed To Interpret Command")  
+       
+    """Send data based on config toggles""" 
     def sendData():
         # Check which types of data should be send down
         if config.doSendGps:
@@ -561,6 +971,7 @@ try:
             radio.sendString("Ping")
             pingTimer = 0
             
+    """Visual startup lightshow"""
     def startupLightshow():
         # All on in sequence then all off in sequence
         gpsLED.turnOn()
@@ -591,63 +1002,50 @@ try:
     receiveLED = LED(board.GP18)
     errorLED = LED(board.GP19)
 
+    commandTimer = timer()
+
     # Define and initialize all onboard devices
     radio = Tranciever()
     gps = GPS()
     altimeter = Altimeter()
     imu = IMU()
     magnometer = Magnometer()
-    #power = Power()
+    power = Power()
+    flywheel = FlywheelMotor()
+    director = DirectorMotor()
+    rotationSystem = rotationControlSystem()
     sd = SDCard()
     # Load Data From Config
     config = cubesatConfig()
     config.loadConfig()
-    
-    clockTimer = 1
-    pingTimer = 0
 
-    angleX = 0
-    angleY = 0
-    angleZ = 0
+    # Timing Intervals
+    clockTimer = 2
+    pingTimer = 1
     
     # Visual startup
     startupLightshow()
     radio.sendString("Cubesat Initialized")
+    
+    flywheel.initMotor().andThen(Commands.getWaitCommand(1)).andThen(flywheel.setPinOutputCommand(50)).andThen(Commands.getWaitCommand(5)).andThen(flywheel.stopMotorCommand()).start()
+    
+    #testCommand = Command(lambda:transmitLED.turnOn()).andThen(Commands.getWaitCommand(2)).andThen(Command(lambda:transmitLED.turnOff()))
+    #testCommand = Command(lambda: transmitLED.turnOn())
+    #testCommand = testCommand.runWith(Command(lambda: receiveLED.turnOn()))
+    #testCommand = testCommand.andThen(Commands.getWaitCommand(1))
+    #testCommand = testCommand.andThen(Command(lambda: transmitLED.turnOff()).runWith(Command(lambda: receiveLED.turnOff())))
+    #testCommand = testCommand.andThen(Commands.getWaitCommand(1))
+    
+    #testCommand.start()
 
     while True:
-        if (clock.monotonic()%0.5) == 0:
-            errorLED.turnOn()
-            
-            if abs(imu.interface.gyro[0]) > 0.05: angleX += imu.interface.gyro[0]
-            if abs(imu.interface.gyro[1]) > 0.05: angleY += imu.interface.gyro[1]
-            if abs(imu.interface.gyro[2]) > 0.05: angleZ += imu.interface.gyro[2]
+        Commands.update()
 
-            if angleX > 6.28: angleX -= 6.28
-            if angleY > 6.28: angleY -= 6.28
-            if angleZ > 6.28: angleZ -= 6.28
-
-            if angleX < 0: angleX = 6.28
-            if angleY < 0: angleY = 6.28
-            if angleZ < 0: angleZ = 6.28
-
-            testAngle = angleZ
-
-            if testAngle >= 0: gpsLED.turnOn()
-            else: gpsLED.turnOff()
-            if testAngle >= 2.1: transmitLED.turnOn()
-            else: transmitLED.turnOff()
-            if testAngle >= 4.2: receiveLED.turnOn()
-            else: receiveLED.turnOff()
-
-            if (clock.monotonic()%0.5) == 0: 
-                radio.sendString(str(testAngle))
-            
-            errorLED.turnOff()
-        if (clock.monotonic()%clockTimer) == 0:
-            processCommand() # Process incoming commands
+        if abs(clock.monotonic()%clockTimer) == 0:
+            processCommand(str(radio.readIncoming())) # Process incoming commands
             sendData() # Send any data that is toggled to be sent
             processLED.toggle() # Visualize clock cycle
-            receiveLED.turnOff() # Reset recieve LED
+            #receiveLED.turnOff() # Reset recieve LED
             errorLED.turnOff() # Reset error LED
             pingTimer += 1 # Incriment Ping Timer
 except:
