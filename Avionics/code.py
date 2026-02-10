@@ -49,7 +49,7 @@ try:
         def __init__(self):
             # Define default config values
             self.doSendGps = False
-            self.doSendAlt = False
+            self.doSendAlt = True
             self.doSendImu = False
             self.doSendMag = False
             self.doSendPow = False
@@ -471,13 +471,13 @@ try:
             self.duty_cycle = 2**15
 
         def setPinOutputCommand(self, frequency=1000, dutyCycle=2**15):
-            return Command(lambda: self.resetPWM()).andThen(Commands.getWaitCommand(1)).andThen(Command(lambda: self.setFrequency(frequency)).alongWith(Command(lambda: self.setDutyCycle(dutyCycle))).alongWith(Command(lambda: self.updateInterface())))
+            return Command(lambda: self.resetPWM()).andThen(Commands.getWaitCommand(0.1)).andThen(Command(lambda: self.setFrequency(frequency)).runWith(Command(lambda: self.setDutyCycle(dutyCycle))).runWith(Command(lambda: self.updateInterface())))
 
         def setFrequency(self, frequencyIn):
             self.frequency = frequencyIn
 
         def setDutyCycle(self, dutyCycleIn):
-            self.frequency = dutyCycleIn
+            self.duty_cycle = dutyCycleIn
         
         def resetPWM(self):
             self.interface.deinit()
@@ -488,8 +488,8 @@ try:
         def stopMotorCommand(self):
             return self.setPinOutputCommand(1000)
 
-        def initMotor(self):
-            return self.setPinOutputCommand(500).andThen(Commands.getWaitCommand(1)).andThen(Command(lambda: self.stopMotorCommand()))
+        def initMotorCommand(self):
+            return self.setPinOutputCommand(500).andThen(Commands.getWaitCommand(2)).andThen(self.stopMotorCommand)
         
     class DirectorMotor(onboardDevice):
         def __init__(self):
@@ -639,6 +639,13 @@ try:
             if isinstance(self, parallelCommandSequence): self.addCommand(Command)
             else: self = parallelCommandSequence([self, Command], [], LAST)
             return self
+        
+        """Add a finish condition"""
+        def until(self, condition):
+            self.addFinishCondition(condition)
+            return self
+
+        
         
         """Stop the command from running"""
         def cancel(self):
@@ -790,14 +797,16 @@ try:
     def processCommand(inString):
         # read the recieved data from the radio by default
         # allow for user to pass in a string to process
-        
-        if inString is not "None": receiveLED.turnOn()
-        
+        if inString is not "None" : receiveLED.turnOn()
+        else: return 
+         
         # Format string to be more default and readable
         inString = inString.lower()
         inString = inString[2:] # remove(b')
         inString = inString.replace(" ", "")
         inString = inString.replace("'", "") # remove end '
+
+
 
         try:
             # Ping the cube for a response
@@ -1027,8 +1036,7 @@ try:
     startupLightshow()
     radio.sendString("Cubesat Initialized")
     
-    flywheel.initMotor().andThen(Commands.getWaitCommand(1)).andThen(flywheel.setPinOutputCommand(50)).andThen(Commands.getWaitCommand(5)).andThen(flywheel.stopMotorCommand()).start()
-    
+    #flywheel.initMotorCommand().start()
     #testCommand = Command(lambda:transmitLED.turnOn()).andThen(Commands.getWaitCommand(2)).andThen(Command(lambda:transmitLED.turnOff()))
     #testCommand = Command(lambda: transmitLED.turnOn())
     #testCommand = testCommand.runWith(Command(lambda: receiveLED.turnOn()))
@@ -1045,7 +1053,7 @@ try:
             processCommand(str(radio.readIncoming())) # Process incoming commands
             sendData() # Send any data that is toggled to be sent
             processLED.toggle() # Visualize clock cycle
-            #receiveLED.turnOff() # Reset recieve LED
+            receiveLED.turnOff() # Reset recieve LED
             errorLED.turnOff() # Reset error LED
             pingTimer += 1 # Incriment Ping Timer
 except:
