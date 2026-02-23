@@ -1,0 +1,59 @@
+Ping: Simple connection test, responds w/ Pong
+
+Set: Set an internal value and update the config file
+
+    Dosend: whether or not to send a specific value or data packet on measurement intervals
+        GPS: GPS data
+        ALT: Altimeter data
+        Imu: Imu data
+        Mag: Magnometer data
+        Pow: Power data
+        Ping: interval ping
+        All: All sensor data
+            True: send the data
+            False: do not send the data
+    
+    Pingint: the interval on which the cube sends a constant ping
+        Integer number
+    
+LED: Toggle an LED
+    GPS: GPS LED
+    Tx: Transmit LED
+    Rx: Recieve lED
+    Sen: Sensor LED
+    Err: Error LED
+
+Get: Get an internal value or packet of data
+    
+    Dosend: whether or not to send a specific value or data packet on measurement intervals
+        GPS: GPS data
+        ALT: Altimeter data
+        Imu: Imu data
+        Mag: Magnometer data
+        Pow: Power data
+    
+    Config: return all internal config values
+    
+    Data: get an individual packet of data from an individual sensor
+        GPS: GPS data
+        ALT: Altimeter data
+        Imu: Imu data
+        Mag: Magnometer data
+        Pow: Power data
+    
+    cube status: funner to type version of ping, returns alive if the connection is successful
+
+Save: save a specific value of data
+    GPS: GPS data
+    ALT: Altimeter data
+    Imu: Imu data
+    Mag: Magnometer data
+    Pow: Power data
+
+Look: (Integer # of degrees) make the cube turn a given distance using the flywheel control system 
+
+Reset: Reset the cube
+
+runLights: run the startup light show
+
+Eval: run a specific line of code
