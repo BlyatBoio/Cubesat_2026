@@ -470,17 +470,21 @@ try:
             self.frequency = 500
             self.duty_cycle = 2**15
 
+        """Set the output frequency of the PWM Pin of the Flywheel motor (hz)"""
         def setFrequency(self, frequencyIn):
             self.frequency = frequencyIn
             self.interface.frequency = frequencyIn
             
+        """Set the output duty cycle of the PWM Pin of the Flywheel motor (0->2^16)"""
         def setDutyCycle(self, dutyCycleIn):
             self.duty_cycle = dutyCycleIn
             self.interface.duty_cycle = dutyCycleIn
         
+        """Stop the motor from spinning"""
         def stopMotorCommand(self):
             return Command(lambda: self.setFrequncy(1000))
 
+        """Activate the motors"""
         def initMotorCommand(self):
             return Command(lambda: self.setFrequency(500)).andThen(Commands.getWaitCommand(2)).andThen(self.stopMotorCommand)
         
@@ -494,16 +498,19 @@ try:
             self.interface = pwmio.PWMOut(PWMPin2, frequency=self.frequency, duty_cycle=self.duty_cycle, variable_frequency=True) # Flywheel Servo Motor PWM
             self.boardArgs = ["PWM", PWMPin2, self.frequency, self.dutyCycle]
 
+        """Set the output frequency of the PWM Pin of the Director motor (hz)"""
         def setFrequency(self, frequencyIn):
             dutyCycleIn = int(dutyCycleIn)
             self.frequency = frequencyIn
             self.interface.frequency = frequencyIn
             
+        """Set the output duty cycle of the PWM Pin of the Director motor (0->2^16)"""
         def setDutyCycle(self, dutyCycleIn):
             dutyCycleIn = int(dutyCycleIn)
             self.duty_cycle = dutyCycleIn
             self.interface.duty_cycle = self.duty_cycle
 
+        """Set the target angle of the servo motor in degrees"""
         def setServoRotationTo(self, degrees):
             # Constrain angle to 0-180
             degrees = max(0, min(180, degrees))
