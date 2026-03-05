@@ -25,9 +25,10 @@ try:
     # Define bord access points
     SPI1 = busio.SPI(board.GP10,MOSI=board.GP11,MISO=board.GP12) # SD Card
     CS1 = digitalio.DigitalInOut(board.GP13) # SD Card Chip Select
-
-    PWM1 = pwmio.PWMOut(board.GP28) # Flywheel Servo Motor PWM
     
+    PWMPin1 = board.GP28
+    PWMPin2 = board.GP27
+
     I2C0 = busio.I2C(board.GP1,board.GP0,frequency=10000) # Altimeter, IMU, Magnometer, Power, Solar, Battery
     UART0 = busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10) # GPS
     
@@ -464,57 +465,57 @@ try:
         def __init__(self):
             super().__init__()
             # Define access point for Flywheel Motor
-            self.interface = pwmio.PWMOut(board.GP27, frequency=500, duty_cycle=2**15, variable_frequency=True)
-            self.boardArgs = ["PWM", board.GP27, "frequency: 50", "duty_cycle: 2**15", "variable_frequency: True"]
-            self.brakeMode = False
-            self.frequency = 50
+            self.interface = pwmio.PWMOut(PWMPin1, frequency=500, duty_cycle=2**15, variable_frequency=True)
+            self.boardArgs = ["PWM", PWMPin1, "frequency: 50", "duty_cycle: 2**15", "variable_frequency: True"]
+            self.frequency = 500
             self.duty_cycle = 2**15
-
-        def setPinOutputCommand(self, frequency=1000, dutyCycle=2**15):
-            return Command(lambda: self.resetPWM()).andThen(Commands.getWaitCommand(0.1)).andThen(Command(lambda: self.setFrequency(frequency)).runWith(Command(lambda: self.setDutyCycle(dutyCycle))).runWith(Command(lambda: self.updateInterface())))
 
         def setFrequency(self, frequencyIn):
             self.frequency = frequencyIn
-
+            self.interface.frequency = frequencyIn
+            
         def setDutyCycle(self, dutyCycleIn):
             self.duty_cycle = dutyCycleIn
+            self.interface.duty_cycle = dutyCycleIn
         
-        def resetPWM(self):
-            self.interface.deinit()
-        
-        def updateInterface(self):
-            self.interface = pwmio.PWMOut(board.GP27, frequency=self.frequency, duty_cycle=self.duty_cycle, variable_frequency=True)
-            
         def stopMotorCommand(self):
-            return self.setPinOutputCommand(1000)
+            return Command(lambda: self.setFrequncy(1000))
 
         def initMotorCommand(self):
-            return self.setPinOutputCommand(500).andThen(Commands.getWaitCommand(2)).andThen(self.stopMotorCommand)
+            return Command(lambda: self.setFrequency(500)).andThen(Commands.getWaitCommand(2)).andThen(self.stopMotorCommand)
         
+    """Interface Class for the Servo Motor"""
     class DirectorMotor(onboardDevice):
         def __init__(self):
             super().__init__()
             # Define access point for Flywheel Motor
-            self.interface = PWM1
-            self.boardArgs = ["PWM", board.GP28]
-            self.brakeMode = False
+            self.frequency = 50
+            self.duty_cycle = 8192
+            self.interface = pwmio.PWMOut(PWMPin2, frequency=self.frequency, duty_cycle=self.duty_cycle, variable_frequency=True) # Flywheel Servo Motor PWM
+            self.boardArgs = ["PWM", PWMPin2, self.frequency, self.dutyCycle]
 
-        """Spin the flywheel clockwise at a percent throttle"""
-        def spinClockwise(self, percentThrotle):
-            # 0.1 ms = 100% reverse throttle 0.2 ms = 100% throttle fwd
-            self.interface.frequency = 0.15+(percentThrotle / 100)/20
-
-        """Spin the flywheel counterClockwise at a percent throttle"""
-        def spinCounterClockwise(self, percentThrotle):
-            # 0.1 ms = 100% reverse throttle 0.2 ms = 100% throttle fwd
-            self.interface.frequency = 0.15-(percentThrotle / 100)/20
+        def setFrequency(self, frequencyIn):
+            dutyCycleIn = int(dutyCycleIn)
+            self.frequency = frequencyIn
+            self.interface.frequency = frequencyIn
             
-        """Set the brake mode of the flywheel motor"""
-        def setBrakeMode(self, value):
-            self.brakeMode = value
-            if self.brakeMode:
-                self.interface.frequency = 0.2            
-        
+        def setDutyCycle(self, dutyCycleIn):
+            dutyCycleIn = int(dutyCycleIn)
+            self.duty_cycle = dutyCycleIn
+            self.interface.duty_cycle = self.duty_cycle
+
+        def setServoRotationTo(self, degrees):
+            # Constrain angle to 0-180
+            degrees = max(0, min(180, degrees))
+            
+            # Map angle to pulse width (500 to 2500 us)
+            pulse_width = 500 + ((degrees / 180) * 2000)
+            
+            # Calculate 16-bit duty cycle (0-65535)
+            duty_cycle = round((pulse_width / 20000) * 65535)
+            
+            return self.setDutyCycle(duty_cycle)
+
     """Helper class to control rotation of the cubesat"""
     class rotationControlSystem:
         LEFT = True
@@ -1036,18 +1037,20 @@ try:
     startupLightshow()
     radio.sendString("Cubesat Initialized")
     
-    #flywheel.initMotorCommand().start()
-    #testCommand = Command(lambda:transmitLED.turnOn()).andThen(Commands.getWaitCommand(2)).andThen(Command(lambda:transmitLED.turnOff()))
-    #testCommand = Command(lambda: transmitLED.turnOn())
-    #testCommand = testCommand.runWith(Command(lambda: receiveLED.turnOn()))
-    #testCommand = testCommand.andThen(Commands.getWaitCommand(1))
-    #testCommand = testCommand.andThen(Command(lambda: transmitLED.turnOff()).runWith(Command(lambda: receiveLED.turnOff())))
-    #testCommand = testCommand.andThen(Commands.getWaitCommand(1))
+    directorAngle = 0
+    incriment = 0.1
     
-    #testCommand.start()
-
     while True:
         Commands.update()
+        
+        directorAngle += 0.1
+        
+        if directorAngle > 360 or directorAngle < 0:
+            directorAngle = -directorAngle
+            directorAngle = max(min(directorAngle, 360), 0)
+            gpsLED.toggle()
+        
+        director.setServoRotationTo(directorAngle)
 
         if abs(clock.monotonic()%clockTimer) == 0:
             processCommand(str(radio.readIncoming())) # Process incoming commands
