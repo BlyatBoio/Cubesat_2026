@@ -26,8 +26,8 @@ try:
     SPI1 = busio.SPI(board.GP10,MOSI=board.GP11,MISO=board.GP12) # SD Card
     CS1 = digitalio.DigitalInOut(board.GP13) # SD Card Chip Select
     
-    PWMPin1 = board.GP28
-    PWMPin2 = board.GP27
+    PWMPin1 = board.GP27
+    PWMPin2 = board.GP28
 
     I2C0 = busio.I2C(board.GP1,board.GP0,frequency=10000) # Altimeter, IMU, Magnometer, Power, Solar, Battery
     UART0 = busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10) # GPS
@@ -465,10 +465,9 @@ try:
         def __init__(self):
             super().__init__()
             # Define access point for Flywheel Motor
-            self.interface = pwmio.PWMOut(PWMPin1, frequency=500, duty_cycle=2**15, variable_frequency=True)
-            self.boardArgs = ["PWM", PWMPin1, "frequency: 50", "duty_cycle: 2**15", "variable_frequency: True"]
-            self.frequency = 500
-            self.duty_cycle = 2**15
+            self.frequency = 50
+            self.duty_cycle = int(1900/20000) * 65535
+            self.interface = pwmio.PWMOut(PWMPin1, frequency=self.frequency, duty_cycle=self.duty_cycle, variable_frequency=True)
 
         """Set the output frequency of the PWM Pin of the Flywheel motor (hz)"""
         def setFrequency(self, frequencyIn):
@@ -477,16 +476,18 @@ try:
             
         """Set the output duty cycle of the PWM Pin of the Flywheel motor (0->2^16)"""
         def setDutyCycle(self, dutyCycleIn):
-            self.duty_cycle = dutyCycleIn
-            self.interface.duty_cycle = dutyCycleIn
-        
-        """Stop the motor from spinning"""
-        def stopMotorCommand(self):
-            return Command(lambda: self.setFrequncy(1000))
-
-        """Activate the motors"""
+            dutyCycle = int(dutyCycle)
+            self.duty_cycle = dutyCycle
+            self.interface.duty_cycle = self.duty_cycle
+            
+        def setPowerPercent(self, percent):
+            percent = max(0, min(100, percent))
+            pulse_width = 1100 + ((percent / 100) * 800)
+            dutyCycle = int((pulse_width / 20000) * 65535)
+            self.setDutyCycle(self.duty_cycle)
+            
         def initMotorCommand(self):
-            return Command(lambda: self.setFrequency(500)).andThen(Commands.getWaitCommand(2)).andThen(self.stopMotorCommand)
+            return Command(lambda: self.setPowerPercent(100)).andThen(Commands.getWaitCommand(4)).andThen(Command(lambda: self.setPowerPercent(0)))
         
     """Interface Class for the Servo Motor"""
     class DirectorMotor(onboardDevice):
@@ -494,9 +495,11 @@ try:
             super().__init__()
             # Define access point for Flywheel Motor
             self.frequency = 50
-            self.duty_cycle = 8192
+            self.duty_cycle = int(500/20000) * 65535
             self.interface = pwmio.PWMOut(PWMPin2, frequency=self.frequency, duty_cycle=self.duty_cycle, variable_frequency=True) # Flywheel Servo Motor PWM
-            self.boardArgs = ["PWM", PWMPin2, self.frequency, self.dutyCycle]
+            self.boardArgs = ["PWM", PWMPin2, self.frequency, self.duty_cycle]
+            self.currentAngle = 0
+            self.angleStep = 0.1
 
         """Set the output frequency of the PWM Pin of the Director motor (hz)"""
         def setFrequency(self, frequencyIn):
@@ -510,8 +513,20 @@ try:
             self.duty_cycle = dutyCycleIn
             self.interface.duty_cycle = self.duty_cycle
 
+        def setTargetPositionCommand(self, degrees):
+            return Command(lambda: self.stepServoRotationTo(degrees), [], [lambda: self.hasReachedTarget(degrees)])
+        
+        def hasReachedTarget(self, target):
+            return abs(self.currentAngle - target) < 1
+
+        def stepServoRotationTo(self, target):
+            if self.currentAngle < target: self.setServoRotationTo(self.currentAngle+self.angleStep)
+            else: self.setServoRotationTo(self.currentAngle-self.angleStep)
+
         """Set the target angle of the servo motor in degrees"""
         def setServoRotationTo(self, degrees):
+            self.currentAngle = degrees
+            
             # Constrain angle to 0-180
             degrees = max(0, min(180, degrees))
             
@@ -519,53 +534,9 @@ try:
             pulse_width = 500 + ((degrees / 180) * 2000)
             
             # Calculate 16-bit duty cycle (0-65535)
-            duty_cycle = round((pulse_width / 20000) * 65535)
+            duty_cycle = int((pulse_width / 20000) * 65535)
             
             return self.setDutyCycle(duty_cycle)
-
-    """Helper class to control rotation of the cubesat"""
-    class rotationControlSystem:
-        LEFT = True
-        RIGHT = False
-        def __init__(self):
-            self.isRotating = False
-            self.rotatedDegrees = 0
-            self.degreesToRotate = 0
-            
-        """Start rotating the cubesat a certain number of degrees"""
-        def startRotation(self, degreesToRotate, direction):
-            # Reset rotation tracking variables
-            self.isRotating = True
-            self.rotatedDegrees = 0
-            flywheel.setBrakeMode(False)
-            # Set target rotation
-            self.degreesToRotate = degreesToRotate
-            
-            Commands.runCommand(Command(lambda: self.runRotation(), [], [lambda:self.getIsFinished()]).andThen(Command(lambda:self.stopRotation())))
-            
-            if direction == rotationControlSystem.LEFT:
-                Commands.runCommand(Command(lambda: director.spinClockwise()).andThen(Commands.getWaitCommand(1)).andThen(lambda: director.setBrakeMode(True)))
-            else:
-                Commands.runCommand(Command(lambda: director.spinCounterClockwise()).andThen(Commands.getWaitCommand(1)).andThen(lambda: director.setBrakeMode(True)))
-        
-        """Stop rotating the cubesat"""
-        def stopRotation(self):
-            self.isRotating = False
-            flywheel.setBrakeMode(True)
-        
-        def getIsFinished(self):
-            return self.rotatedDegrees > self.degreesToRotate
-        
-        """Run rotation control loop, should be called in main loop"""
-        def runRotation(self):
-            self.rotatedDegrees += 3.14 * (imu.interface.gyro[2]) / 180
-            # Handle directionality
-            if self.degreesToRotate > 0:
-                # (100% - percent completed) = percent throttle
-                flywheel.spinClockwise(((self.degreesToRotate - self.rotatedDegrees) / self.degreesToRotate) * 100)
-            else:
-                # (100% - percent completed) = percent throttle
-                flywheel.spinCounterClockwise(((abs(self.degreesToRotate) - abs(self.rotatedDegrees)) / abs(self.degreesToRotate)) * 100)
         
     LAST = 1
     RACE = 2
@@ -653,8 +624,6 @@ try:
             self.addFinishCondition(condition)
             return self
 
-        
-        
         """Stop the command from running"""
         def cancel(self):
             self.isFinished = True
@@ -1030,34 +999,26 @@ try:
     power = Power()
     flywheel = FlywheelMotor()
     director = DirectorMotor()
-    rotationSystem = rotationControlSystem()
     sd = SDCard()
     # Load Data From Config
     config = cubesatConfig()
     config.loadConfig()
 
     # Timing Intervals
-    clockTimer = 2
+    clockTimer = 0.5
     pingTimer = 1
     
     # Visual startup
+    flywheel.initMotorCommand()
+    director.setTargetPositionCommand(0).start()
+    
+    testSequence = Command()
+    
     startupLightshow()
     radio.sendString("Cubesat Initialized")
     
-    directorAngle = 0
-    incriment = 0.1
-    
     while True:
         Commands.update()
-        
-        directorAngle += 0.1
-        
-        if directorAngle > 360 or directorAngle < 0:
-            directorAngle = -directorAngle
-            directorAngle = max(min(directorAngle, 360), 0)
-            gpsLED.toggle()
-        
-        director.setServoRotationTo(directorAngle)
 
         if abs(clock.monotonic()%clockTimer) == 0:
             processCommand(str(radio.readIncoming())) # Process incoming commands
@@ -1065,6 +1026,7 @@ try:
             processLED.toggle() # Visualize clock cycle
             receiveLED.turnOff() # Reset recieve LED
             errorLED.turnOff() # Reset error LED
-            pingTimer += 1 # Incriment Ping Timer
+            pingTimer += 1 # Incriment Ping Timer     
+
 except:
     error("Critical Error Occured")
