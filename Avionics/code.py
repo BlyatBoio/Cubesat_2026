@@ -25,8 +25,6 @@ try:
     # Define bord access points
     SPI1 = busio.SPI(board.GP10,MOSI=board.GP11,MISO=board.GP12) # SD Card
     CS1 = digitalio.DigitalInOut(board.GP13) # SD Card Chip Select
-
-    PWM1 = pwmio.PWMOut(board.GP28) # Flywheel Servo Motor PWM
     
     I2C0 = busio.I2C(board.GP1,board.GP0,frequency=10000) # Altimeter, IMU, Magnometer, Power, Solar, Battery
     UART0 = busio.UART(board.GP16,board.GP17,baudrate=9600,timeout=10) # GPS
@@ -495,7 +493,7 @@ try:
         def __init__(self):
             super().__init__()
             # Define access point for Flywheel Motor
-            self.interface = PWM1
+            self.interface = pwmio.PWMOut(board.GP28, frequency=500, duty_cycle=2**15) # Flywheel Servo Motor PWM
             self.boardArgs = ["PWM", board.GP28]
             self.brakeMode = False
 
