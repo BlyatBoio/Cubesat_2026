@@ -468,6 +468,8 @@ try:
             self.frequency = 50
             self.duty_cycle = int(1900/20000) * 65535
             self.interface = pwmio.PWMOut(PWMPin1, frequency=self.frequency, duty_cycle=self.duty_cycle, variable_frequency=True)
+            self.currentPercentOutput = 0
+            self.powerIncriment = 0.025
 
         """Set the output frequency of the PWM Pin of the Flywheel motor (hz)"""
         def setFrequency(self, frequencyIn):
@@ -476,15 +478,26 @@ try:
             
         """Set the output duty cycle of the PWM Pin of the Flywheel motor (0->2^16)"""
         def setDutyCycle(self, dutyCycleIn):
-            dutyCycle = int(dutyCycle)
-            self.duty_cycle = dutyCycle
+            dutyCycleIn = int(dutyCycleIn)
+            self.duty_cycle = dutyCycleIn
             self.interface.duty_cycle = self.duty_cycle
             
+        def stepPowerPercent(self, target):
+            if target > self.currentPercentOutput: self.setPowerPercent(self.currentPercentOutput + self.powerIncriment)
+            else: self.setPowerPercent(self.currentPercentOutput - self.powerIncriment)
+            
+        def hasReached(self, target):
+            return abs(self.currentPercentOutput - target) < self.powerIncriment
+            
+        def rampPowerPercentCommand(self, targetPercent):
+            return Command(lambda: self.stepPowerPercent(targetPercent), [], [lambda: self.hasReached(targetPercent)])
+                    
         def setPowerPercent(self, percent):
             percent = max(0, min(100, percent))
+            self.currentPercentOutput = percent
             pulse_width = 1100 + ((percent / 100) * 800)
             dutyCycle = int((pulse_width / 20000) * 65535)
-            self.setDutyCycle(self.duty_cycle)
+            self.setDutyCycle(dutyCycle)
             
         def initMotorCommand(self):
             return Command(lambda: self.setPowerPercent(100)).andThen(Commands.getWaitCommand(4)).andThen(Command(lambda: self.setPowerPercent(0)))
@@ -499,7 +512,7 @@ try:
             self.interface = pwmio.PWMOut(PWMPin2, frequency=self.frequency, duty_cycle=self.duty_cycle, variable_frequency=True) # Flywheel Servo Motor PWM
             self.boardArgs = ["PWM", PWMPin2, self.frequency, self.duty_cycle]
             self.currentAngle = 0
-            self.angleStep = 0.1
+            self.angleStep = 0.05
 
         """Set the output frequency of the PWM Pin of the Director motor (hz)"""
         def setFrequency(self, frequencyIn):
@@ -913,13 +926,9 @@ try:
                     saveValue("Power Save", str(power.getData()))
                 else:
                     error("Command Not Understood")
-            # Rotate the cube
-            elif inString[0:4] is "look":
-                inString = inString[4:]
-                direction = inString[0:1]
-                degreesToRotate = float(inString[1:])   
-                rotationSystem.startRotation(degreesToRotate, rotationControlSystem.LEFT if (direction is "l") else rotationControlSystem.RIGHT)
-                radio.sendString("Rotating "+str(degreesToRotate)+" Degrees to the " + "left" if (direction is "l") else "right")
+            elif inString[0:9] is "starttest":
+                gpsLED.turnOn()
+                testSequence.start()
             # Reset Cube
             elif inString[0:5] is "reset":
                 #config.saveConfig()
@@ -1000,7 +1009,7 @@ try:
     flywheel = FlywheelMotor()
     director = DirectorMotor()
     sd = SDCard()
-    # Load Data From Config
+    # LAoad Data From Config
     config = cubesatConfig()
     config.loadConfig()
 
@@ -1009,10 +1018,12 @@ try:
     pingTimer = 1
     
     # Visual startup
-    flywheel.initMotorCommand()
+    flywheel.initMotorCommand().start()
     director.setTargetPositionCommand(0).start()
     
-    testSequence = Command()
+    testSequence = director.setTargetPositionCommand(0).andThen(director.setTargetPositionCommand(180)).andThen(flywheel.rampPowerPercentCommand(100)).andThen(Commands.getWaitCommand(2)).andThen(director.setTargetPositionCommand(0)).andThen(director.setTargetPositionCommand(180)).andThen(flywheel.rampPowerPercentCommand(0))
+    
+    testSequence.start()
     
     startupLightshow()
     radio.sendString("Cubesat Initialized")
