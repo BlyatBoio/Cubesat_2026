@@ -125,7 +125,7 @@ try:
                 # Define file paths
                 self.configPath = "/sd/config.txt"
                 self.errorPath = "/sd/error.txt"
-                self.dataPath = "/sd/data.txt"
+                self.dataPath = "/sd/data"
                 
                 # Open Files
                 with open(self.configPath, "w") as file:
@@ -136,7 +136,7 @@ try:
                     pass
 
                 # Write default config to config file
-                self.writeToFile(self.configPath, "f\nf\nf\nf\nf\n1")
+                self.writeToFile(self.configPath, "w", "f\nf\nf\nf\nf\n1")
                 self.isFunctional = True
             except:
                 self.isFunctional = False
@@ -146,11 +146,11 @@ try:
             FilePath: Path to file on SD Card
             String: String to write to file
         """
-        def writeToFile(self, filePath, string):
+        def writeToFile(self, filePath, writeTypeArg, string):
             try:
                 self.isFunctional = True # If it cant write a file, this value will be reset to false
 
-                with open(filePath, "w") as writeFile:
+                with open(filePath, writeTypeArg) as writeFile:
                     writeFile.write(string)
             except:
                 self.isFunctional = False
@@ -193,6 +193,14 @@ try:
                 self.isFunctional = False
                 return "err Failed To Send GPS Data"
 
+        def saveData(self):
+            saveValue("Lat", self.interface.latitude)
+            saveValue("Long", self.interface.longitude)
+            saveValue("Alt", self.interface.altitude_m)
+            saveValue("Spd", self.interface.speed_knots*(463/900))
+            saveValue("Sat", self.interface.satellites)
+            saveValue("Hd", self.interface.horizontal_dilution)
+
     """Interface class for the Altimeter"""
     class Altimeter(onboardDevice):
         def __init__(self):
@@ -226,6 +234,13 @@ try:
             except:
                 self.isFunctional = False
                 return "err Failed To Send Altimeter Data"
+        
+        def saveData(self):
+            saveValue("Alt", self.interface.altitude)
+            saveValue("Temp", self.interface.temperature)
+            saveValue("Press", self.interface.pressure)
+            saveValue("Hum", self.interface.relative_humidity)
+            saveValue("Gas", self.interface.gas)
                 
     """Interface class for the IMU"""
     class IMU(onboardDevice):
@@ -256,6 +271,14 @@ try:
             except:
                 self.isFunctional = False
                 return "err Failed To Send IMU Data"
+        
+        def saveData(self):
+            saveValue("Acc X", self.interface.acceleration[0])
+            saveValue("Acc Y", self.interface.acceleration[1])
+            saveValue("Acc Z", self.interface.acceleration[2])
+            saveValue("Rot X", self.interface.gyro[0])
+            saveValue("Rot Y", self.interface.gyro[1])
+            saveValue("Rot Z", self.interface.gyro[2])
                 
     """Interface class for the Magnometer"""
     class Magnometer(onboardDevice):
@@ -283,6 +306,11 @@ try:
             except:
                 self.isFunctional = False
                 return "err Failed To Send Magnometer Data"
+        
+        def saveData(self):
+            saveValue("Acc X", self.interface.magnetic[0])
+            saveValue("Acc Y", self.interface.magnetic[1])
+            saveValue("Acc Z", self.interface.magnetic[2])
                 
     """Interface class for the Power"""
     class Power(onboardDevice):
@@ -335,6 +363,11 @@ try:
             except:
                 self.isFunctional = False
                 return "err Failed To Send Power Data"
+        
+        def saveData(self):
+            saveValue("Volt", self.interface.bus_voltage)
+            saveValue("Current", self.interface.current / 1000)
+            saveValue("Watt", self.interface.bus_voltage * (self.powerDrawInterface.current / 1000))
 
     """Interface class for the Solar"""
     class Solar(onboardDevice):
@@ -772,14 +805,14 @@ try:
         
     """Send an error via radio and log it to the SD Card"""
     def error(errorMessage):
-        sd.writeToFile(sd.errorPath, errorMessage)
+        sd.writeToFile(sd.errorPath, "a", errorMessage)
         radio.sendError(errorMessage)
-        errorLED.turnOn()
+        Command(lambda: errorLED.turnOn()).andThen(Commands.getWaitCommand(1)).andThen(Command(lambda: errorLED.turnOff())).start()
     
     """Save a value to the SD Card"""
     def saveValue(label, value):
         if sd.isFunctional: 
-            sd.writeToFile(sd.dataPath, label + ": " + value)
+            sd.writeToFile(curLogFile, "a", label + ": " + value)
         else:
             error("SD Is Not Functional, Could Not Save Value")
 
@@ -787,7 +820,7 @@ try:
     def processCommand(inString):
         # read the recieved data from the radio by default
         # allow for user to pass in a string to process
-        if inString is not "None" : receiveLED.turnOn()
+        if inString is not "None" : Command(lambda: receiveLED.turnOn()).andThen(Commands.getWaitCommand(1)).andThen(Command(lambda: receiveLED.turnOff())).start()
         else: return 
          
         # Format string to be more default and readable
@@ -795,8 +828,6 @@ try:
         inString = inString[2:] # remove(b')
         inString = inString.replace(" ", "")
         inString = inString.replace("'", "") # remove end '
-
-
 
         try:
             # Ping the cube for a response
@@ -965,6 +996,15 @@ try:
         if config.doPing and pingTimer >= config.pingInterval:
             radio.sendString("Ping")
             pingTimer = 0
+    
+    def saveAllData():
+        curLogFile = sd.dataPath+"/Log"+numLogs
+        gps.saveData()
+        altimeter.saveData()
+        imu.saveData()
+        magnometer.saveData()
+        power.saveData()
+        numLogs += 1
             
     """Visual startup lightshow"""
     def startupLightshow():
@@ -998,7 +1038,7 @@ try:
     errorLED = LED(board.GP19)
 
     commandTimer = timer()
-
+    
     # Define and initialize all onboard devices
     radio = Tranciever()
     gps = GPS()
@@ -1009,9 +1049,12 @@ try:
     flywheel = FlywheelMotor()
     director = DirectorMotor()
     sd = SDCard()
-    # LAoad Data From Config
+    # Load Data From Config
     config = cubesatConfig()
     config.loadConfig()
+
+    numLogs = 0
+    curLogFile = sd.dataPath+"/Log"+numLogs
 
     # Timing Intervals
     clockTimer = 0.5
@@ -1035,8 +1078,6 @@ try:
             processCommand(str(radio.readIncoming())) # Process incoming commands
             sendData() # Send any data that is toggled to be sent
             processLED.toggle() # Visualize clock cycle
-            receiveLED.turnOff() # Reset recieve LED
-            errorLED.turnOff() # Reset error LED
             pingTimer += 1 # Incriment Ping Timer     
 
 except:
