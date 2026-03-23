@@ -50,7 +50,7 @@ try:
         def __init__(self):
             # Define default config values
             self.doSendGps = False
-            self.doSendAlt = True
+            self.doSendAlt = False
             self.doSendImu = False
             self.doSendMag = False
             self.doSendPow = False
@@ -125,7 +125,7 @@ try:
                 # Define file paths
                 self.configPath = "/sd/config.txt"
                 self.errorPath = "/sd/error.txt"
-                self.dataPath = "/sd/data"
+                self.dataPath = "/sd/data.txt"
                 
                 # Open Files
                 with open(self.configPath, "w") as file:
@@ -136,7 +136,7 @@ try:
                     pass
 
                 # Write default config to config file
-                self.writeToFile(self.configPath, "w", "f\nf\nf\nf\nf\n1")
+                self.writeToFile(self.configPath, "f\nf\nf\nf\nf\n1")
                 self.isFunctional = True
             except:
                 self.isFunctional = False
@@ -146,11 +146,11 @@ try:
             FilePath: Path to file on SD Card
             String: String to write to file
         """
-        def writeToFile(self, filePath, writeTypeArg, string):
+        def writeToFile(self, filePath, string):
             try:
                 self.isFunctional = True # If it cant write a file, this value will be reset to false
 
-                with open(filePath, writeTypeArg) as writeFile:
+                with open(filePath, "w") as writeFile:
                     writeFile.write(string)
             except:
                 self.isFunctional = False
@@ -193,14 +193,6 @@ try:
                 self.isFunctional = False
                 return "err Failed To Send GPS Data"
 
-        def saveData(self):
-            saveValue("Lat", self.interface.latitude)
-            saveValue("Long", self.interface.longitude)
-            saveValue("Alt", self.interface.altitude_m)
-            saveValue("Spd", self.interface.speed_knots*(463/900))
-            saveValue("Sat", self.interface.satellites)
-            saveValue("Hd", self.interface.horizontal_dilution)
-
     """Interface class for the Altimeter"""
     class Altimeter(onboardDevice):
         def __init__(self):
@@ -234,13 +226,6 @@ try:
             except:
                 self.isFunctional = False
                 return "err Failed To Send Altimeter Data"
-        
-        def saveData(self):
-            saveValue("Alt", self.interface.altitude)
-            saveValue("Temp", self.interface.temperature)
-            saveValue("Press", self.interface.pressure)
-            saveValue("Hum", self.interface.relative_humidity)
-            saveValue("Gas", self.interface.gas)
                 
     """Interface class for the IMU"""
     class IMU(onboardDevice):
@@ -271,14 +256,6 @@ try:
             except:
                 self.isFunctional = False
                 return "err Failed To Send IMU Data"
-        
-        def saveData(self):
-            saveValue("Acc X", self.interface.acceleration[0])
-            saveValue("Acc Y", self.interface.acceleration[1])
-            saveValue("Acc Z", self.interface.acceleration[2])
-            saveValue("Rot X", self.interface.gyro[0])
-            saveValue("Rot Y", self.interface.gyro[1])
-            saveValue("Rot Z", self.interface.gyro[2])
                 
     """Interface class for the Magnometer"""
     class Magnometer(onboardDevice):
@@ -306,11 +283,6 @@ try:
             except:
                 self.isFunctional = False
                 return "err Failed To Send Magnometer Data"
-        
-        def saveData(self):
-            saveValue("Acc X", self.interface.magnetic[0])
-            saveValue("Acc Y", self.interface.magnetic[1])
-            saveValue("Acc Z", self.interface.magnetic[2])
                 
     """Interface class for the Power"""
     class Power(onboardDevice):
@@ -363,11 +335,6 @@ try:
             except:
                 self.isFunctional = False
                 return "err Failed To Send Power Data"
-        
-        def saveData(self):
-            saveValue("Volt", self.interface.bus_voltage)
-            saveValue("Current", self.interface.current / 1000)
-            saveValue("Watt", self.interface.bus_voltage * (self.powerDrawInterface.current / 1000))
 
     """Interface class for the Solar"""
     class Solar(onboardDevice):
@@ -805,22 +772,58 @@ try:
         
     """Send an error via radio and log it to the SD Card"""
     def error(errorMessage):
-        sd.writeToFile(sd.errorPath, "a", errorMessage)
+        sd.writeToFile(sd.errorPath, errorMessage)
         radio.sendError(errorMessage)
-        Command(lambda: errorLED.turnOn()).andThen(Commands.getWaitCommand(1)).andThen(Command(lambda: errorLED.turnOff())).start()
+        errorLED.turnOn()
     
     """Save a value to the SD Card"""
     def saveValue(label, value):
         if sd.isFunctional: 
-            sd.writeToFile(curLogFile, "a", label + ": " + value)
+            sd.writeToFile(sd.dataPath, label + ": " + value)
         else:
             error("SD Is Not Functional, Could Not Save Value")
+
+    def saveAllData():
+        gpsData = gps.getData().split(" ")
+        saveValue("Lat",gpsData[0])
+        saveValue("Long",gpsData[1])
+        saveValue("Alt",gpsData[2])
+        saveValue("Speed",gpsData[3])
+        saveValue("Sat",gpsData[4])
+        saveValue("HD",gpsData[5])
+
+        altData = altimeter.getData().split(" ")
+        saveValue("Alt",altData[0])
+        saveValue("Temp",altData[1])
+        saveValue("Pres",altData[2])
+        saveValue("Hum",altData[3])
+        saveValue("Gas",altData[4])
+
+        imuData = imu.getData().split(" ")
+        saveValue("Acc X",imuData[0])
+        saveValue("Acc Y",imuData[1])
+        saveValue("Acc Z",imuData[2])
+        saveValue("Rot X",imuData[3])
+        saveValue("Rot Y",imuData[4])
+        saveValue("Rot z",imuData[5])
+        
+        magData = magnometer.getData().split(" ")
+        saveValue("Mag X",magData[0])
+        saveValue("Mag Y",magData[1])
+        saveValue("Mag Z",magData[2])
+        
+        powData = power.getData().split(" ")
+        saveValue("Volts",powData[0])
+        saveValue("Current",powData[1])
+        saveValue("Watts",powData[2])
+        saveValue("Bat Percent",powData[3])
+        saveValue("Bat Volts",powData[3])
 
     """Process a command string incoming or internally generated"""
     def processCommand(inString):
         # read the recieved data from the radio by default
         # allow for user to pass in a string to process
-        if inString is not "None" : Command(lambda: receiveLED.turnOn()).andThen(Commands.getWaitCommand(1)).andThen(Command(lambda: receiveLED.turnOff())).start()
+        if inString is not "None" : receiveLED.turnOn()
         else: return 
          
         # Format string to be more default and readable
@@ -828,6 +831,8 @@ try:
         inString = inString[2:] # remove(b')
         inString = inString.replace(" ", "")
         inString = inString.replace("'", "") # remove end '
+
+
 
         try:
             # Ping the cube for a response
@@ -996,15 +1001,6 @@ try:
         if config.doPing and pingTimer >= config.pingInterval:
             radio.sendString("Ping")
             pingTimer = 0
-    
-    def saveAllData():
-        curLogFile = sd.dataPath+"/Log"+numLogs
-        gps.saveData()
-        altimeter.saveData()
-        imu.saveData()
-        magnometer.saveData()
-        power.saveData()
-        numLogs += 1
             
     """Visual startup lightshow"""
     def startupLightshow():
@@ -1038,7 +1034,7 @@ try:
     errorLED = LED(board.GP19)
 
     commandTimer = timer()
-    
+
     # Define and initialize all onboard devices
     radio = Tranciever()
     gps = GPS()
@@ -1049,12 +1045,9 @@ try:
     flywheel = FlywheelMotor()
     director = DirectorMotor()
     sd = SDCard()
-    # Load Data From Config
+    # LAoad Data From Config
     config = cubesatConfig()
     config.loadConfig()
-
-    numLogs = 0
-    curLogFile = sd.dataPath+"/Log"+numLogs
 
     # Timing Intervals
     clockTimer = 0.5
@@ -1064,9 +1057,7 @@ try:
     flywheel.initMotorCommand().start()
     director.setTargetPositionCommand(0).start()
     
-    testSequence = director.setTargetPositionCommand(0).andThen(director.setTargetPositionCommand(180)).andThen(flywheel.rampPowerPercentCommand(100)).andThen(Commands.getWaitCommand(2)).andThen(director.setTargetPositionCommand(0)).andThen(director.setTargetPositionCommand(180)).andThen(flywheel.rampPowerPercentCommand(0))
-    
-    testSequence.start()
+    #testSequence = director.setTargetPositionCommand(0).andThen(director.setTargetPositionCommand(180)).andThen(flywheel.rampPowerPercentCommand(100)).andThen(Commands.getWaitCommand(2)).andThen(director.setTargetPositionCommand(0)).andThen(director.setTargetPositionCommand(180)).andThen(flywheel.rampPowerPercentCommand(0))
     
     startupLightshow()
     radio.sendString("Cubesat Initialized")
@@ -1078,6 +1069,8 @@ try:
             processCommand(str(radio.readIncoming())) # Process incoming commands
             sendData() # Send any data that is toggled to be sent
             processLED.toggle() # Visualize clock cycle
+            receiveLED.turnOff() # Reset recieve LED
+            errorLED.turnOff() # Reset error LED
             pingTimer += 1 # Incriment Ping Timer     
 
 except:
