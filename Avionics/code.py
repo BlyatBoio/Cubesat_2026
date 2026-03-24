@@ -945,6 +945,45 @@ try:
             
             self.setDutyCycle(duty_cycle)
         
+    class RotationalControlSystem():
+        def __init__(self):
+            self.targetRotation = 0
+            self.currentDegreesRotated = 0
+            self.pid = PIDController(1, 0.1, 0.1)
+            self.currentCommand = Command
+        
+        def setTargetRotation(self, targetRotation:float):
+            """Set the target rotation of the flywheel to a given angle
+                Args:
+                    percent (float): the angle to rotate
+            """
+            self.currentCommand.cancel()
+            self.currentDegreesRotated = 0
+            self.targetRotation = targetRotation
+            self.pid.setSetpoint(targetRotation)
+        
+        def updateControl(self):
+            """Update PID Control"""
+            pidOut = self.pid.getControlOutput(self.currentDegreesRotated)
+            flywheel.setTargetSetpointCommand(abs(pidOut)).start()
+            director.setTargetPositionCommand(pidOut > 0 if 15 else 165) # if the velocity is positive or negative, place the servo in the appropriate spot
+            self.currentDegreesRotated += imu.interface.gyro[2]
+        
+        def hasReached(self) -> bool:
+            """Get whether or not the cube has rotated the target ammount
+                Returns:
+                    (bool): Whether or not the cube has rotated the target ammount
+            """
+            return abs(self.targetRotation - self.currentDegreesRotated) < 1
+        
+        def getRotationCommand(self, targetRotation:float) -> Command:
+            """Get a command to rotate the cube a given amount in degrees
+                Args:
+                    targetRotation (float): Rotation in degrees to rotate the cube
+            """
+            self.currentCommand = Command(lambda: self.setTargetRotation(targetRotation)).andThen(Command(lambda: self.updateControl(), [], [lambda:self.hasReached()]))
+            return self.currentCommand
+    
     class PIDController:
         """Control class to take in a PID tuning and use closed loop feedback to provide a dynamic curve"""
         def __init__(self, Kp:float, Ki:float, Kd:float):
@@ -1120,7 +1159,7 @@ try:
             # Set data 
             elif inString[0:3] is "set":
                 inString = inString[3:]
-
+                
                 # Toggle what data is sent down
                 if inString[0:6] is "dosend":
                     inString = inString[6:]
@@ -1160,6 +1199,16 @@ try:
                     config.pingInterval = int(inString[7:])
                     radio.sendString("Ping Interval Now: " + str(config.pingInterval) + " Clock Cycles")
                     config.saveConfig()
+                
+                elif inString[0:5] is "servo":
+                    director.setTargetPositionCommand(float(inString[5:]))
+                    
+                elif inString[0:8] is "flywheel":
+                    flywheel.setTargetSetpointCommand(float(inString[8:]))
+                
+                elif inString[0:8] is "rotation":
+                    rotationControl.setTargetRotation(float(inString[8:]))
+                    
                 else:
                     error("Command Not Understood")
             # Toggle on or off an LED
@@ -1324,6 +1373,8 @@ try:
     flywheel = FlywheelMotor()
     director = DirectorMotor()
     sd = SDCard()
+    rotationControl = RotationalControlSystem()
+
     # LAoad Data From Config
     config = cubesatConfig()
     config.loadConfig()
