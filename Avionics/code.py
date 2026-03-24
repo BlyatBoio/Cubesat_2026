@@ -125,14 +125,12 @@ try:
                 # Define file paths
                 self.configPath = "/sd/config.txt"
                 self.errorPath = "/sd/error.txt"
-                self.dataPath = "/sd/data.txt"
+                self.dataPath = "/sd/data/"
                 
                 # Open Files
                 with open(self.configPath, "w") as file:
                     pass
                 with open(self.errorPath, "w") as file:
-                    pass
-                with open(self.dataPath, "w") as file:
                     pass
 
                 # Write default config to config file
@@ -146,11 +144,11 @@ try:
             FilePath: Path to file on SD Card
             String: String to write to file
         """
-        def writeToFile(self, filePath, string):
+        def writeToFile(self, filePath, string, writeType="w"):
             try:
                 self.isFunctional = True # If it cant write a file, this value will be reset to false
 
-                with open(filePath, "w") as writeFile:
+                with open(filePath, writeType) as writeFile:
                     writeFile.write(string)
             except:
                 self.isFunctional = False
@@ -772,52 +770,71 @@ try:
         
     """Send an error via radio and log it to the SD Card"""
     def error(errorMessage):
-        sd.writeToFile(sd.errorPath, errorMessage)
+        sd.writeToFile(sd.errorPath, errorMessage, "a")
         radio.sendError(errorMessage)
         errorLED.turnOn()
     
     """Save a value to the SD Card"""
     def saveValue(label, value):
-        if sd.isFunctional: 
-            sd.writeToFile(sd.dataPath, label + ": " + value)
-        else:
+        try:
+            sd.writeToFile(f"/sd/data/log_{numLogs}.txt", label + ": " + value + "\n", "a")
+        except:
             error("SD Is Not Functional, Could Not Save Value")
 
     def saveAllData():
+        if not sd.isFunctional: return
+
+        global numLogs
+        numLogs += 1
+        
+        with open(f"/sd/data/log_{numLogs}.txt", "w") as logFile:
+            pass
+                
         gpsData = gps.getData().split(" ")
-        saveValue("Lat",gpsData[0])
-        saveValue("Long",gpsData[1])
-        saveValue("Alt",gpsData[2])
-        saveValue("Speed",gpsData[3])
-        saveValue("Sat",gpsData[4])
-        saveValue("HD",gpsData[5])
+        if gpsData[0] != "err":
+            saveValue("Device",gpsData[0])
+            saveValue("Lat",gpsData[1])
+            saveValue("Long",gpsData[2])
+            saveValue("Alt",gpsData[3])
+            saveValue("Speed",gpsData[4])
+            saveValue("Sat",gpsData[5])
+            saveValue("HD",gpsData[6])
+        else:
+            saveValue("Error", "Saving GPS Data")
 
         altData = altimeter.getData().split(" ")
-        saveValue("Alt",altData[0])
-        saveValue("Temp",altData[1])
-        saveValue("Pres",altData[2])
-        saveValue("Hum",altData[3])
-        saveValue("Gas",altData[4])
+        saveValue("Device",altData[0])
+        saveValue("Alt",altData[1])
+        saveValue("Temp",altData[2])
+        saveValue("Pres",altData[3])
+        saveValue("Hum",altData[4])
+        saveValue("Gas",altData[5])
 
         imuData = imu.getData().split(" ")
-        saveValue("Acc X",imuData[0])
-        saveValue("Acc Y",imuData[1])
-        saveValue("Acc Z",imuData[2])
-        saveValue("Rot X",imuData[3])
-        saveValue("Rot Y",imuData[4])
-        saveValue("Rot z",imuData[5])
+        saveValue("Device",imuData[0])
+        saveValue("Acc X",imuData[1])
+        saveValue("Acc Y",imuData[2])
+        saveValue("Acc Z",imuData[3])
+        saveValue("Rot X",imuData[4])
+        saveValue("Rot Y",imuData[5])
+        saveValue("Rot z",imuData[6])
         
         magData = magnometer.getData().split(" ")
-        saveValue("Mag X",magData[0])
-        saveValue("Mag Y",magData[1])
-        saveValue("Mag Z",magData[2])
+        saveValue("Device",magData[0])
+        saveValue("Mag X",magData[1])
+        saveValue("Mag Y",magData[2])
+        saveValue("Mag Z",magData[3])
         
         powData = power.getData().split(" ")
-        saveValue("Volts",powData[0])
-        saveValue("Current",powData[1])
-        saveValue("Watts",powData[2])
-        saveValue("Bat Percent",powData[3])
-        saveValue("Bat Volts",powData[3])
+        if powData[0] != "err":
+            saveValue("Device",powData[0])
+            saveValue("Volts",powData[1])
+            saveValue("Current",powData[2])
+            saveValue("Watts",powData[3])
+            saveValue("Bat Percent",powData[4])
+            saveValue("Bat Volts",powData[5])
+        else:
+            saveValue("Error", "Saving Power Data")
 
     """Process a command string incoming or internally generated"""
     def processCommand(inString):
@@ -831,8 +848,6 @@ try:
         inString = inString[2:] # remove(b')
         inString = inString.replace(" ", "")
         inString = inString.replace("'", "") # remove end '
-
-
 
         try:
             # Ping the cube for a response
@@ -962,9 +977,6 @@ try:
                     saveValue("Power Save", str(power.getData()))
                 else:
                     error("Command Not Understood")
-            elif inString[0:9] is "starttest":
-                gpsLED.turnOn()
-                testSequence.start()
             # Reset Cube
             elif inString[0:5] is "reset":
                 #config.saveConfig()
@@ -1050,8 +1062,10 @@ try:
     config.loadConfig()
 
     # Timing Intervals
-    clockTimer = 0.5
+    clockTimer = 2
     pingTimer = 1
+    
+    numLogs = 0
     
     # Visual startup
     flywheel.initMotorCommand().start()
@@ -1068,6 +1082,7 @@ try:
         if abs(clock.monotonic()%clockTimer) == 0:
             processCommand(str(radio.readIncoming())) # Process incoming commands
             sendData() # Send any data that is toggled to be sent
+            saveAllData() # Save all data to log files on SD
             processLED.toggle() # Visualize clock cycle
             receiveLED.turnOff() # Reset recieve LED
             errorLED.turnOff() # Reset error LED
