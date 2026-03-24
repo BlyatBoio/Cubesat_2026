@@ -939,6 +939,67 @@ try:
             
             self.setDutyCycle(duty_cycle)
         
+    class PIDController:
+        """Control class to take in a PID tuning and use closed loop feedback to provide a dynamic curve"""
+        def __init__(self, Kp:float, Ki:float, Kd:float):
+            """Create new PID Controller with tuning Kp, Ki, Kd
+                Args:
+                    Kp (float): P-term multiplier / how much error existing increases the speed it approaches the target
+                    Ki (float): I-term multiplier / how much time passing increases the speed it approaches the target
+                    Kd (float): D-term multiplier / how much the decrease in error over time decreases the speed it approaches the target
+            """
+            # Control Tuning Variables
+            self.Kp = Kp
+            self.Ki = Ki
+            self.Kd = Kd
+            
+            # Control Variables
+            self.accumulatedError = 0
+            self.pastError = 0
+            self.setpoint = 0
+        
+        def setSetpoint(self, value:float):
+            """Set the setpoint value that the PID controller will attempt to reach
+                Args:
+                    value (float): The new value of the setpoint
+            """
+            self.setpoint = value
+            # when target changes, the error will be different and thus is reset
+            self.accumulatedError = 0
+            self.pastError = 0
+        
+        def getControlOutput(self, measuredValue:float, timeStep=0.1) -> float:
+            """Get the calculated rate of change of the value based on the provided measured value and past error data
+                Args:
+                    measuredValue (float): The measured value of the value the PID Controller is controling
+                    timeStep (float): The time step since the last control output calculation
+                Returns:
+                    (float): The calculated rate of change to apply to the controled variable
+            """
+            err = self.getError(measuredValue) # get how far the measured value is from the target value
+            
+            # Kp: P-term multiplier / how much error existing increases the speed it approaches the target
+            # Ki: I(ntegral)-term multiplier / how much time passing increases the speed it approaches the target
+            # Kd: D(erivative)-term multiplier / how much the decrease in error over time decreases the speed it approaches the target
+            
+            # Calculate control output
+            controlOutput = (self.Kp * err) + (self.Ki * self.accumulatedError * timeStep) + ((err - self.pastError) / timeStep)
+            
+            # update control variables
+            self.accumulatedError += err
+            self.pastError = err
+            
+            return controlOutput
+        
+        def getError(self, measuredValue:float) -> float:
+            """Get how far the current measured variable is from the setpoint
+                Args:
+                    measuredValue (float): The measured value of the value the PID Controller is controling
+                Returns:
+                    (float): The current error / distance between the measured value and setpoint
+            """
+            return self.setpoint - measuredValue
+
     class timer:
         """Simple timer class"""
         def __init__(self):
