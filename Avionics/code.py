@@ -783,6 +783,7 @@ try:
     class FlywheelMotor(onboardDevice):
         """Interface class for the Flywheel Motor"""
         def __init__(self):
+            """Creates a new flywheel motor interface"""
             super().__init__()
             # ESC has a typical frequency of 50 hz 
             self.frequency = 50
@@ -793,9 +794,13 @@ try:
             # Variable frequency is also required to be true if you are changing duty cycle which we are
             self.interface = pwmio.PWMOut(PWMPin1, frequency=self.frequency, duty_cycle=self.duty_cycle, variable_frequency=True)
             
+            # Define PID controler
+            self.pid = PIDController(1, 0.1, 0.1)
+            
             # Control variables
             self.currentPercentOutput = 0
-            self.powerIncriment = 0.025
+            self.targetSetpoint = 0
+            self.currentCommand = Command()
 
         def setFrequency(self, frequencyIn:int):
             """Set the output frequency of the PWM Pin of the Flywheel motor (hz)
@@ -815,32 +820,33 @@ try:
             self.duty_cycle = dutyCycleIn
             self.interface.duty_cycle = self.duty_cycle
             
-        def stepPowerPercent(self, target:float):
-            """Step the output percentage of the flywheel by a pre-defined step size towards the provided target
-                Args:
-                    target (float): the percent (0-100)% power output to set the motor to
-            """
-            if target > self.currentPercentOutput: self.setPowerPercent(self.currentPercentOutput + self.powerIncriment)
-            else: self.setPowerPercent(self.currentPercentOutput - self.powerIncriment)
+        def updateControl(self):
+            """Update PID Control"""
+            self.currentPercentOutput += self.pid.getControlOutput(self.currentPercentOutput)
             
-        def hasReached(self, target:float) -> bool:
-            """Boolean conditional to check if the current power out is within an acceptable error of the target value
+        def setTargetSetpointCommand(self, targetPercent:float) -> Command:
+            """Get a command to ramp the velocity of the flywheel to a given setpoint via PID
                 Args:
-                    target (float): the percent (0-100)% power output to set the motor to
+                    targetPercent (float): the percent to ramp the velocity to
                 Returns:
-                    (bool): whether or not the flywheel has reached its target percentage
-            """
-            return abs(self.currentPercentOutput - target) < self.powerIncriment
+                    (Command): Command that when started will ramp the velocity of the flywheel over time
+            """ 
             
-        def rampPowerPercentCommand(self, targetPercent:float) -> Command:
-            """Get a command to ramp the power from its current percentage to the target percentage
-                Args:
-                    target (float): the percent (0-100)% power output to ramp the motor to  
+            # update target setpoints
+            self.pid.setSetpoint(targetPercent)
+            self.targetSetpoint = targetPercent
+            
+            # Cancel currently running target setpoint command if this is called in the middle of another target setpoint, then run the default pid control loop
+            self.currentCommand = Command(lambda: self.currentCommand.cancel()).andThen(Command(lambda: self.updateControl(), [], [lambda: self.hasReached()]))
+            return self.currentCommand
+
+        def hasReached(self) -> bool:
+            """Get whether or not the flywheel has reached its target velocity setpoint
                 Returns:
-                    (Command): command that will ramp from current power to the provided target power
+                    (bool): Whether or not the flywheel has reached its setpoint
             """
-            return Command(lambda: self.stepPowerPercent(targetPercent), [], [lambda: self.hasReached(targetPercent)])
-                    
+            return (self.targetSetpoint - self.currentPercentOutput < 1)
+        
         def setPowerPercent(self, percent:float):
             """Set the requested output of the flywheel to a given percentage
                 Args:
