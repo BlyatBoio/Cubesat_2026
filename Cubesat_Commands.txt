@@ -57,3 +57,7 @@ Reset: Reset the cube
 runLights: run the startup light show
 
 Eval: run a specific line of code
+
+Ping: returns pong if the cube is on and initialized propperly
+
+Init Motor: run the initialize startup sequence for the flywheel Motor
