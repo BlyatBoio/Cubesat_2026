@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['Groundstation.py'],
+    ['groundstation.py'],
     pathex=[],
     binaries=[],
     datas=[],
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='Groundstation',
+    name='groundstation',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

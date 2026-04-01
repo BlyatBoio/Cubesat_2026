@@ -783,6 +783,7 @@ try:
     class FlywheelMotor(onboardDevice):
         """Interface class for the Flywheel Motor"""
         def __init__(self):
+            """Creates a new flywheel motor interface"""
             super().__init__()
             # ESC has a typical frequency of 50 hz 
             self.frequency = 50
@@ -793,9 +794,13 @@ try:
             # Variable frequency is also required to be true if you are changing duty cycle which we are
             self.interface = pwmio.PWMOut(PWMPin1, frequency=self.frequency, duty_cycle=self.duty_cycle, variable_frequency=True)
             
+            # Define PID controler
+            self.pid = PIDController(1, 0.1, 0.1)
+            
             # Control variables
             self.currentPercentOutput = 0
-            self.powerIncriment = 0.025
+            self.targetSetpoint = 0
+            self.currentCommand = Command()
 
         def setFrequency(self, frequencyIn:int):
             """Set the output frequency of the PWM Pin of the Flywheel motor (hz)
@@ -815,32 +820,33 @@ try:
             self.duty_cycle = dutyCycleIn
             self.interface.duty_cycle = self.duty_cycle
             
-        def stepPowerPercent(self, target:float):
-            """Step the output percentage of the flywheel by a pre-defined step size towards the provided target
-                Args:
-                    target (float): the percent (0-100)% power output to set the motor to
-            """
-            if target > self.currentPercentOutput: self.setPowerPercent(self.currentPercentOutput + self.powerIncriment)
-            else: self.setPowerPercent(self.currentPercentOutput - self.powerIncriment)
+        def updateControl(self):
+            """Update PID Control"""
+            self.currentPercentOutput += self.pid.getControlOutput(self.currentPercentOutput)
             
-        def hasReached(self, target:float) -> bool:
-            """Boolean conditional to check if the current power out is within an acceptable error of the target value
+        def setTargetSetpointCommand(self, targetPercent:float) -> Command:
+            """Get a command to ramp the velocity of the flywheel to a given setpoint via PID
                 Args:
-                    target (float): the percent (0-100)% power output to set the motor to
+                    targetPercent (float): the percent to ramp the velocity to
                 Returns:
-                    (bool): whether or not the flywheel has reached its target percentage
-            """
-            return abs(self.currentPercentOutput - target) < self.powerIncriment
+                    (Command): Command that when started will ramp the velocity of the flywheel over time
+            """ 
             
-        def rampPowerPercentCommand(self, targetPercent:float) -> Command:
-            """Get a command to ramp the power from its current percentage to the target percentage
-                Args:
-                    target (float): the percent (0-100)% power output to ramp the motor to  
+            # update target setpoints
+            self.pid.setSetpoint(targetPercent)
+            self.targetSetpoint = targetPercent
+            
+            # Cancel currently running target setpoint command if this is called in the middle of another target setpoint, then run the default pid control loop
+            self.currentCommand = Command(lambda: self.currentCommand.cancel()).andThen(Command(lambda: self.updateControl(), [], [lambda: self.hasReached()]))
+            return self.currentCommand
+
+        def hasReached(self) -> bool:
+            """Get whether or not the flywheel has reached its target velocity setpoint
                 Returns:
-                    (Command): command that will ramp from current power to the provided target power
+                    (bool): Whether or not the flywheel has reached its setpoint
             """
-            return Command(lambda: self.stepPowerPercent(targetPercent), [], [lambda: self.hasReached(targetPercent)])
-                    
+            return (self.targetSetpoint - self.currentPercentOutput < 1)
+        
         def setPowerPercent(self, percent:float):
             """Set the requested output of the flywheel to a given percentage
                 Args:
@@ -939,6 +945,106 @@ try:
             
             self.setDutyCycle(duty_cycle)
         
+    class RotationalControlSystem():
+        def __init__(self):
+            self.targetRotation = 0
+            self.currentDegreesRotated = 0
+            self.pid = PIDController(1, 0.1, 0.1)
+            self.currentCommand = Command
+        
+        def setTargetRotation(self, targetRotation:float):
+            """Set the target rotation of the flywheel to a given angle
+                Args:
+                    percent (float): the angle to rotate
+            """
+            self.currentCommand.cancel()
+            self.currentDegreesRotated = 0
+            self.targetRotation = targetRotation
+            self.pid.setSetpoint(targetRotation)
+        
+        def updateControl(self):
+            """Update PID Control"""
+            pidOut = self.pid.getControlOutput(self.currentDegreesRotated)
+            flywheel.setTargetSetpointCommand(abs(pidOut)).start()
+            director.setTargetPositionCommand(pidOut > 0 if 15 else 165) # if the velocity is positive or negative, place the servo in the appropriate spot
+            self.currentDegreesRotated += imu.interface.gyro[2]
+        
+        def hasReached(self) -> bool:
+            """Get whether or not the cube has rotated the target ammount
+                Returns:
+                    (bool): Whether or not the cube has rotated the target ammount
+            """
+            return abs(self.targetRotation - self.currentDegreesRotated) < 1
+        
+        def getRotationCommand(self, targetRotation:float) -> Command:
+            """Get a command to rotate the cube a given amount in degrees
+                Args:
+                    targetRotation (float): Rotation in degrees to rotate the cube
+            """
+            self.currentCommand = Command(lambda: self.setTargetRotation(targetRotation)).andThen(Command(lambda: self.updateControl(), [], [lambda:self.hasReached()]))
+            return self.currentCommand
+    
+    class PIDController:
+        """Control class to take in a PID tuning and use closed loop feedback to provide a dynamic curve"""
+        def __init__(self, Kp:float, Ki:float, Kd:float):
+            """Create new PID Controller with tuning Kp, Ki, Kd
+                Args:
+                    Kp (float): P-term multiplier / how much error existing increases the speed it approaches the target
+                    Ki (float): I-term multiplier / how much time passing increases the speed it approaches the target
+                    Kd (float): D-term multiplier / how much the decrease in error over time decreases the speed it approaches the target
+            """
+            # Control Tuning Variables
+            self.Kp = Kp
+            self.Ki = Ki
+            self.Kd = Kd
+            
+            # Control Variables
+            self.accumulatedError = 0
+            self.pastError = 0
+            self.setpoint = 0
+        
+        def setSetpoint(self, value:float):
+            """Set the setpoint value that the PID controller will attempt to reach
+                Args:
+                    value (float): The new value of the setpoint
+            """
+            self.setpoint = value
+            # when target changes, the error will be different and thus is reset
+            self.accumulatedError = 0
+            self.pastError = 0
+        
+        def getControlOutput(self, measuredValue:float, timeStep=0.1) -> float:
+            """Get the calculated rate of change of the value based on the provided measured value and past error data
+                Args:
+                    measuredValue (float): The measured value of the value the PID Controller is controling
+                    timeStep (float): The time step since the last control output calculation
+                Returns:
+                    (float): The calculated rate of change to apply to the controled variable
+            """
+            err = self.getError(measuredValue) # get how far the measured value is from the target value
+            
+            # Kp: P-term multiplier / how much error existing increases the speed it approaches the target
+            # Ki: I(ntegral)-term multiplier / how much time passing increases the speed it approaches the target
+            # Kd: D(erivative)-term multiplier / how much the decrease in error over time decreases the speed it approaches the target
+            
+            # Calculate control output
+            controlOutput = (self.Kp * err) + (self.Ki * self.accumulatedError * timeStep) + ((err - self.pastError) / timeStep)
+            
+            # update control variables
+            self.accumulatedError += err
+            self.pastError = err
+            
+            return controlOutput
+        
+        def getError(self, measuredValue:float) -> float:
+            """Get how far the current measured variable is from the setpoint
+                Args:
+                    measuredValue (float): The measured value of the value the PID Controller is controling
+                Returns:
+                    (float): The current error / distance between the measured value and setpoint
+            """
+            return self.setpoint - measuredValue
+
     class timer:
         """Simple timer class"""
         def __init__(self):
@@ -1053,7 +1159,7 @@ try:
             # Set data 
             elif inString[0:3] is "set":
                 inString = inString[3:]
-
+                
                 # Toggle what data is sent down
                 if inString[0:6] is "dosend":
                     inString = inString[6:]
@@ -1093,6 +1199,16 @@ try:
                     config.pingInterval = int(inString[7:])
                     radio.sendString("Ping Interval Now: " + str(config.pingInterval) + " Clock Cycles")
                     config.saveConfig()
+                
+                elif inString[0:5] is "servo":
+                    director.setTargetPositionCommand(float(inString[5:]))
+                    
+                elif inString[0:8] is "flywheel":
+                    flywheel.setTargetSetpointCommand(float(inString[8:]))
+                
+                elif inString[0:8] is "rotation":
+                    rotationControl.setTargetRotation(float(inString[8:]))
+                    
                 else:
                     error("Command Not Understood")
             # Toggle on or off an LED
@@ -1257,6 +1373,8 @@ try:
     flywheel = FlywheelMotor()
     director = DirectorMotor()
     sd = SDCard()
+    rotationControl = RotationalControlSystem()
+
     # LAoad Data From Config
     config = cubesatConfig()
     config.loadConfig()
