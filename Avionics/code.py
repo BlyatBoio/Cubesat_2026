@@ -947,41 +947,73 @@ try:
         
     class RotationalControlSystem():
         def __init__(self):
-            self.targetRotation = 0
+            self.targetVelocity = 0
             self.currentDegreesRotated = 0
             self.pid = PIDController(1, 0.1, 0.1)
             self.currentCommand = Command
         
-        def setTargetRotation(self, targetRotation:float):
+        def settargetVelocity(self, targetVelocity:float):
             """Set the target rotation of the flywheel to a given angle
                 Args:
                     percent (float): the angle to rotate
             """
             self.currentCommand.cancel()
-            self.currentDegreesRotated = 0
-            self.targetRotation = targetRotation
-            self.pid.setSetpoint(targetRotation)
+            self.targetVelocity = targetVelocity
+            self.pid.setSetpoint(targetVelocity)
+        
+        def setKp(self, Kp:float):
+            """Set the Kp value of the rotational control PID controler
+                Args:
+                    Kp: the P-term multiplier    
+            """
+            self.pid.Kp = Kp
+            
+        def setKi(self, Ki:float):
+            """Set the Ki value of the rotational control PID controler
+                Args:
+                    Ki: the I-term multiplier    
+            """
+            self.pid.Ki = Ki
+        
+        def setKd(self, Kd:float):
+            """Set the Kd value of the rotational control PID controler
+                Args:
+                    Kd: the D-term multiplier    
+            """
+            self.pid.Kd = Kd
+            
+        def setPID(self, Kp:float, Ki:float, Kd:float):
+            """Update the PID Tuning variables within the control system
+                Args:
+                    Kp: the P-term multiplier to set
+                    Ki: the I-term multiplier to set
+                    Kd: the D-term multiplier to set
+            """
+            self.pid.Kp = Kp
+            self.pid.Ki = Ki
+            self.pid.Kd = Kd
         
         def updateControl(self):
             """Update PID Control"""
-            pidOut = self.pid.getControlOutput(self.currentDegreesRotated)
+            pidOut = self.pid.getControlOutput(imu.interface.gyro[2])
             flywheel.setTargetSetpointCommand(abs(pidOut)).start()
             director.setTargetPositionCommand(pidOut > 0 if 15 else 165) # if the velocity is positive or negative, place the servo in the appropriate spot
-            self.currentDegreesRotated += imu.interface.gyro[2]
         
         def hasReached(self) -> bool:
             """Get whether or not the cube has rotated the target ammount
                 Returns:
                     (bool): Whether or not the cube has rotated the target ammount
             """
-            return abs(self.targetRotation - self.currentDegreesRotated) < 1
+            return False # command should never end if it is a target velocity
+            # use below code if it is a target position instead of velocity
+            # return abs(self.targetVelocity - self.currentDegreesRotated) < 1 
         
-        def getRotationCommand(self, targetRotation:float) -> Command:
+        def getRotationCommand(self, targetVelocity:float) -> Command:
             """Get a command to rotate the cube a given amount in degrees
                 Args:
-                    targetRotation (float): Rotation in degrees to rotate the cube
+                    targetVelocity (float): Rotation in degrees to rotate the cube
             """
-            self.currentCommand = Command(lambda: self.setTargetRotation(targetRotation)).andThen(Command(lambda: self.updateControl(), [], [lambda:self.hasReached()]))
+            self.currentCommand = Command(lambda: self.settargetVelocity(targetVelocity)).andThen(Command(lambda: self.updateControl(), [], [lambda:self.hasReached()]))
             return self.currentCommand
     
     class PIDController:
@@ -1002,7 +1034,7 @@ try:
             self.accumulatedError = 0
             self.pastError = 0
             self.setpoint = 0
-        
+            
         def setSetpoint(self, value:float):
             """Set the setpoint value that the PID controller will attempt to reach
                 Args:
@@ -1207,7 +1239,22 @@ try:
                     flywheel.setTargetSetpointCommand(float(inString[8:]))
                 
                 elif inString[0:8] is "rotation":
-                    rotationControl.setTargetRotation(float(inString[8:]))
+                    rotationControl.settargetVelocity(float(inString[8:]))
+                    
+                elif inString[0:2] is "kp":
+                    inString = inString[2:]
+                    rotationControl.setKp(float(inString))
+                    radio.sendString(f"Set Rotational Control Kp: {rotationControl.pid.Kp}")
+                    
+                elif inString[0:2] is "ki":
+                    inString = inString[2:]
+                    rotationControl.setKi(float(inString))
+                    radio.sendString(f"Set Rotational Control Ki: {rotationControl.pid.Ki}")
+                    
+                elif inString[0:2] is "kd":
+                    inString = inString[2:]
+                    rotationControl.setKd(float(inString))
+                    radio.sendString(f"Set Rotational Control Kd: {rotationControl.pid.Kd}")
                     
                 else:
                     error("Command Not Understood")
@@ -1268,6 +1315,8 @@ try:
                         radio.sendString(str(power.getData()))
                     else:
                         error("Command Not Understood")
+                elif inString[0:3] is "pid":
+                    radio.sendString(f"Rotational Control PID: Kp: {rotationControl.pid.Kp}\nKi:{rotationControl.pid.Ki}\nKd:{rotationControl.pid.Kd}")
                 # Similar to ping but funner to type
                 elif inString[0:4] is "cube":
                     inString = inString[4:]
