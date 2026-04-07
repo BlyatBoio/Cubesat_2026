@@ -795,7 +795,7 @@ try:
             self.interface = pwmio.PWMOut(PWMPin1, frequency=self.frequency, duty_cycle=self.duty_cycle, variable_frequency=True)
             
             # Define PID controler
-            self.pid = PIDController(1, 0.1, 0.1)
+            self.pid = PIDController(0.001, 0.01, 0.0)
             
             # Control variables
             self.currentPercentOutput = 0
@@ -819,12 +819,46 @@ try:
             dutyCycleIn = int(dutyCycleIn)
             self.duty_cycle = dutyCycleIn
             self.interface.duty_cycle = self.duty_cycle
+        
+        def setKp(self, Kp:float):
+            """Set the Kp value of the flywheel control PID controler
+                Args:
+                    Kp: the P-term multiplier    
+            """
+            self.pid.Kp = Kp
             
+        def setKi(self, Ki:float):
+            """Set the Ki value of the flywheel control PID controler
+                Args:
+                    Ki: the I-term multiplier    
+            """
+            self.pid.Ki = Ki
+        
+        def setKd(self, Kd:float):
+            """Set the Kd value of the flywheel control PID controler
+                Args:
+                    Kd: the D-term multiplier    
+            """
+            self.pid.Kd = Kd
+            
+        def setPID(self, Kp:float, Ki:float, Kd:float):
+            """Update the PID Tuning variables within the control system
+                Args:
+                    Kp: the P-term multiplier to set
+                    Ki: the I-term multiplier to set
+                    Kd: the D-term multiplier to set
+            """
+            self.pid.Kp = Kp
+            self.pid.Ki = Ki
+            self.pid.Kd = Kd
+        
+        
         def updateControl(self):
             """Update PID Control"""
-            self.currentPercentOutput += self.pid.getControlOutput(self.currentPercentOutput)
+            rateOfChange =  self.pid.getControlOutput(self.currentPercentOutput)
+            self.setPowerPercent(self.currentPercentOutput + rateOfChange)
             
-        def setTargetSetpointCommand(self, targetPercent:float) -> Command:
+        def setTargetSetpointCommand(self, targetPercent:float):
             """Get a command to ramp the velocity of the flywheel to a given setpoint via PID
                 Args:
                     targetPercent (float): the percent to ramp the velocity to
@@ -837,15 +871,17 @@ try:
             self.targetSetpoint = targetPercent
             
             # Cancel currently running target setpoint command if this is called in the middle of another target setpoint, then run the default pid control loop
-            self.currentCommand = Command(lambda: self.currentCommand.cancel()).andThen(Command(lambda: self.updateControl(), [], [lambda: self.hasReached()]))
-            return self.currentCommand
+            self.currentCommand.cancel()
+            self.currentCommand = Command(lambda: self.updateControl(), [], [lambda: self.hasReached()])
+            self.currentCommand.start()
 
         def hasReached(self) -> bool:
             """Get whether or not the flywheel has reached its target velocity setpoint
                 Returns:
                     (bool): Whether or not the flywheel has reached its setpoint
             """
-            return (self.targetSetpoint - self.currentPercentOutput < 1)
+            gpsLED.toggle()
+            return (abs(self.targetSetpoint - self.currentPercentOutput) < 1)
         
         def setPowerPercent(self, percent:float):
             """Set the requested output of the flywheel to a given percentage
@@ -917,7 +953,8 @@ try:
                 Returns:
                     (bool): whether or not the servo has reached its target percentage
             """
-            return abs(self.currentAngle - target) < 1
+            return False
+            #return abs(self.currentAngle - target) < 1
 
         def stepServoRotationTo(self, target:float):
             """Step the angle of the servo by a pre-defined step size towards the provided target
@@ -952,7 +989,7 @@ try:
             self.pid = PIDController(1, 0.1, 0.1)
             self.currentCommand = Command
         
-        def settargetVelocity(self, targetVelocity:float):
+        def setTargetVelocity(self, targetVelocity:float):
             """Set the target rotation of the flywheel to a given angle
                 Args:
                     percent (float): the angle to rotate
@@ -1013,7 +1050,7 @@ try:
                 Args:
                     targetVelocity (float): Rotation in degrees to rotate the cube
             """
-            self.currentCommand = Command(lambda: self.settargetVelocity(targetVelocity)).andThen(Command(lambda: self.updateControl(), [], [lambda:self.hasReached()]))
+            self.currentCommand = Command(lambda: self.setTargetVelocity(targetVelocity)).andThen(Command(lambda: self.updateControl(), [], [lambda:self.hasReached()]))
             return self.currentCommand
     
     class PIDController:
@@ -1045,7 +1082,7 @@ try:
             self.accumulatedError = 0
             self.pastError = 0
         
-        def getControlOutput(self, measuredValue:float, timeStep=0.1) -> float:
+        def getControlOutput(self, measuredValue:float, timeStep=0.001) -> float:
             """Get the calculated rate of change of the value based on the provided measured value and past error data
                 Args:
                     measuredValue (float): The measured value of the value the PID Controller is controling
@@ -1060,7 +1097,7 @@ try:
             # Kd: D(erivative)-term multiplier / how much the decrease in error over time decreases the speed it approaches the target
             
             # Calculate control output
-            controlOutput = (self.Kp * err) + (self.Ki * self.accumulatedError * timeStep) + ((err - self.pastError) / timeStep)
+            controlOutput = (self.Kp * err * timeStep) + (self.Ki * self.accumulatedError * timeStep) + (self.Kd*((err - self.pastError)) / timeStep)
             
             # update control variables
             self.accumulatedError += err
@@ -1183,7 +1220,7 @@ try:
         inString = inString[2:] # remove(b') from the start
         inString = inString.replace(" ", "") # remove spaces so a command might look like setdosendgpsfalse so we dont need to account for spaces
         inString = inString.replace("'", "") # remove end '
-
+        
         try:
             # Ping the cube for a response
             if inString[0:4] is "ping":
@@ -1236,26 +1273,41 @@ try:
                     director.setTargetPositionCommand(float(inString[5:]))
                     
                 elif inString[0:8] is "flywheel":
-                    flywheel.setTargetSetpointCommand(float(inString[8:]))
+                    inString = inString[8:]
+                    if inString[0:2] is "kp":
+                        flywheel.setKp(float(inString[2:]))
+                        radio.sendString(f"Set Flywheel Control Kp: {flywheel.pid.Kp}")
+                        
+                    elif inString[0:2] is "ki":
+                        flywheel.setKi(float(inString[2:]))
+                        radio.sendString(f"Set Flywheel Control Ki: {flywheel.pid.Ki}")
+                    
+                    elif inString[0:2] is "kd":
+                        flywheel.setKd(float(inString[2:]))
+                        radio.sendString(f"Set Flywheel Control Kd: {flywheel.pid.Kd}")
                 
+                    else:
+                        flywheel.setTargetSetpointCommand(float(inString))
+                        radio.sendString(f"Set Flywheel Setpoint to: {flywheel.targetSetpoint}")
+                    
                 elif inString[0:8] is "rotation":
-                    rotationControl.settargetVelocity(float(inString[8:]))
+                    inString = inString[8:]
+                    if inString[0:2] is "kp":
+                        rotationControl.setKp(float(inString[2:]))
+                        radio.sendString(f"Set Rotational Control Kp: {rotationControl.pid.Kp}")
+                        
+                    elif inString[0:2] is "ki":
+                        rotationControl.setKi(float(inString[2:]))
+                        radio.sendString(f"Set Rotational Control Ki: {rotationControl.pid.Ki}")
                     
-                elif inString[0:2] is "kp":
-                    inString = inString[2:]
-                    rotationControl.setKp(float(inString))
-                    radio.sendString(f"Set Rotational Control Kp: {rotationControl.pid.Kp}")
-                    
-                elif inString[0:2] is "ki":
-                    inString = inString[2:]
-                    rotationControl.setKi(float(inString))
-                    radio.sendString(f"Set Rotational Control Ki: {rotationControl.pid.Ki}")
-                    
-                elif inString[0:2] is "kd":
-                    inString = inString[2:]
-                    rotationControl.setKd(float(inString))
-                    radio.sendString(f"Set Rotational Control Kd: {rotationControl.pid.Kd}")
-                    
+                    elif inString[0:2] is "kd":
+                        rotationControl.setKd(float(inString[2:]))
+                        radio.sendString(f"Set Rotational Control Kd: {rotationControl.pid.Kd}")
+                
+                    else:
+                        rotationControl.getRotationCommand(float(inString)).start()
+                        radio.sendString(f"Set Rotation Setpoint to: {rotationControl.targetVelocity}")
+                
                 else:
                     error("Command Not Understood")
             # Toggle on or off an LED
@@ -1315,7 +1367,9 @@ try:
                         radio.sendString(str(power.getData()))
                     else:
                         error("Command Not Understood")
-                elif inString[0:3] is "pid":
+                elif inString[0:3] is "flypid":
+                    radio.sendString(f"Flywheel Control PID: Kp: {flywheel.pid.Kp}\nKi:{flywheel.pid.Ki}\nKd:{flywheel.pid.Kd}")
+                elif inString[0:3] is "rotpid":
                     radio.sendString(f"Rotational Control PID: Kp: {rotationControl.pid.Kp}\nKi:{rotationControl.pid.Ki}\nKd:{rotationControl.pid.Kd}")
                 # Similar to ping but funner to type
                 elif inString[0:4] is "cube":
