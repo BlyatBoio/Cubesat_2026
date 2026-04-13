@@ -1045,6 +1045,21 @@ try:
             # use below code if it is a target position instead of velocity
             # return abs(self.targetVelocity - self.currentDegreesRotated) < 1 
         
+        def getStablizeCommand(self) -> Command:
+            """Get a command that will attempt to make the rotational velocity 0"""
+            self.currentCommand = self.getRotationCommand(0)
+            return self.currentCommand
+        
+        def getDelayedRotationCommand(self, velocity:float, duration:float) -> Command:
+            """Get a command to rotate the cube at a given velocity for a given time, then stop for the same time, and repeat until canceled
+                Args:
+                    velocity (float): Rotational velocity in degrees/second to rotate the cube
+                    duration (float): time in seconds for the period of rotation and rest
+            """
+            self.currentCommand = self.getRotationCommand(velocity).andThen(Commands.getWaitCommand(duration/2)).andThen(self.getStablizeCommand()).andThen(Commands.getWaitCommand(duration))
+            self.currentCommand = self.currentCommand.andThen(Command(lambda: self.currentCommand.start()));
+            return self.currentCommand
+        
         def getRotationCommand(self, targetVelocity:float) -> Command:
             """Get a command to rotate the cube a given amount in degrees
                 Args:
