@@ -225,7 +225,7 @@ try:
                 return ""
             splitPacket = packet.split()
             pkt = splitPacket[0]
-            time_value = clock.time()
+            time_value = clock.monotonic()
 
             if pkt == "gps":
                 if len(splitPacket) < 4:
