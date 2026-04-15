@@ -858,12 +858,10 @@ try:
             rateOfChange =  self.pid.getControlOutput(self.currentPercentOutput)
             self.setPowerPercent(self.currentPercentOutput + rateOfChange)
             
-        def setTargetSetpointCommand(self, targetPercent:float):
+        def setTargetSetpoint(self, targetPercent:float):
             """Get a command to ramp the velocity of the flywheel to a given setpoint via PID
                 Args:
                     targetPercent (float): the percent to ramp the velocity to
-                Returns:
-                    (Command): Command that when started will ramp the velocity of the flywheel over time
             """ 
             
             # update target setpoints
@@ -880,7 +878,6 @@ try:
                 Returns:
                     (bool): Whether or not the flywheel has reached its setpoint
             """
-            gpsLED.toggle()
             return (abs(self.targetSetpoint - self.currentPercentOutput) < 1)
         
         def setPowerPercent(self, percent:float):
@@ -918,6 +915,7 @@ try:
             # Control variables
             self.currentAngle = 0
             self.angleStep = 0.05
+            self.currentCommand = Command()
 
         def setFrequency(self, frequencyIn:int):
             """Set the output frequency of the PWM Pin of the Flywheel motor (hz)
@@ -937,15 +935,15 @@ try:
             self.duty_cycle = dutyCycleIn
             self.interface.duty_cycle = self.duty_cycle
 
-        def setTargetPositionCommand(self, degrees:float) -> Command:
+        def setTargetPosition(self, degrees:float):
             """Get a command to step the position from its current angle to the target angle
                 Args:
                     target (float): the angle (0-180) to step the servo to  
-                Returns:
-                    (Command): command that will step from current angle to the provided target angle
             """
-            return Command(lambda: self.stepServoRotationTo(degrees), [], [lambda: self.hasReachedTarget(degrees)])
-        
+            self.currentCommand.cancel()
+            self.currentCommand = Command(lambda: self.stepServoRotationTo(degrees), [], [lambda: self.hasReachedTarget(degrees)])
+            self.currentCommand.start()
+            
         def hasReachedTarget(self, target:float) -> bool:
             """Boolean conditional to check if the current angle out is within an acceptable error of the target value
                 Args:
@@ -987,7 +985,7 @@ try:
             self.targetVelocity = 0
             self.currentDegreesRotated = 0
             self.pid = PIDController(1, 0.1, 0.1)
-            self.currentCommand = Command
+            self.currentCommand = Command()
         
         def setTargetVelocity(self, targetVelocity:float):
             """Set the target rotation of the flywheel to a given angle
@@ -1033,17 +1031,15 @@ try:
         def updateControl(self):
             """Update PID Control"""
             pidOut = self.pid.getControlOutput(imu.interface.gyro[2])
-            flywheel.setTargetSetpointCommand(abs(pidOut)).start()
-            director.setTargetPositionCommand(pidOut > 0 if 15 else 165) # if the velocity is positive or negative, place the servo in the appropriate spot
+            flywheel.setTargetSetpoint(abs(pidOut))
+            director.setTargetPosition((15 if pidOut > 0 else 165))
         
         def hasReached(self) -> bool:
             """Get whether or not the cube has rotated the target ammount
                 Returns:
                     (bool): Whether or not the cube has rotated the target ammount
             """
-            return False # command should never end if it is a target velocity
-            # use below code if it is a target position instead of velocity
-            # return abs(self.targetVelocity - self.currentDegreesRotated) < 1 
+            return abs(self.targetVelocity - imu.interface.gyro[2]) < 1 
         
         def getStablizeCommand(self) -> Command:
             """Get a command that will attempt to make the rotational velocity 0"""
@@ -1065,7 +1061,8 @@ try:
                 Args:
                     targetVelocity (float): Rotation in degrees to rotate the cube
             """
-            self.currentCommand = Command(lambda: self.setTargetVelocity(targetVelocity)).andThen(Command(lambda: self.updateControl(), [], [lambda:self.hasReached()]))
+            self.setTargetVelocity(targetVelocity)
+            self.currentCommand = Command(lambda: self.updateControl(), [], [lambda:self.hasReached()])
             return self.currentCommand
     
     class PIDController:
@@ -1150,7 +1147,8 @@ try:
             Args:
                 errorMessage (str): The error to be saved on the SD and sent via the radio
         """
-        sd.writeToFile(sd.errorPath, errorMessage, "a")
+        if sd.isFunctional: sd.writeToFile(sd.errorPath, errorMessage, "a")
+        else: radio.sendError("Failed To Save Error, SD not functional")
         radio.sendError(errorMessage)
         errorLED.turnOn()
     
@@ -1227,7 +1225,7 @@ try:
             Args:
                 inString (str): the string to process
         """
-        if inString is not "None" : receiveLED.turnOn()
+        if inString is not "None" : receiveLED.turnOff()
         else: return 
          
         # Format string to be more default and processable
@@ -1285,7 +1283,8 @@ try:
                     config.saveConfig()
                 
                 elif inString[0:5] is "servo":
-                    director.setTargetPositionCommand(float(inString[5:]))
+                    director.setTargetPosition(float(inString[5:]))
+                    radio.sendString(f"Set Servo Setpoint To: {inString[5:]}")
                     
                 elif inString[0:8] is "flywheel":
                     inString = inString[8:]
@@ -1302,7 +1301,7 @@ try:
                         radio.sendString(f"Set Flywheel Control Kd: {flywheel.pid.Kd}")
                 
                     else:
-                        flywheel.setTargetSetpointCommand(float(inString))
+                        flywheel.setTargetSetpoint(float(inString))
                         radio.sendString(f"Set Flywheel Setpoint to: {flywheel.targetSetpoint}")
                     
                 elif inString[0:8] is "rotation":
@@ -1382,9 +1381,9 @@ try:
                         radio.sendString(str(power.getData()))
                     else:
                         error("Command Not Understood")
-                elif inString[0:3] is "flypid":
+                elif inString[0:3] is "flywheelpid":
                     radio.sendString(f"Flywheel Control PID: Kp: {flywheel.pid.Kp}\nKi:{flywheel.pid.Ki}\nKd:{flywheel.pid.Kd}")
-                elif inString[0:3] is "rotpid":
+                elif inString[0:3] is "rotationpid":
                     radio.sendString(f"Rotational Control PID: Kp: {rotationControl.pid.Kp}\nKi:{rotationControl.pid.Ki}\nKd:{rotationControl.pid.Kd}")
                 # Similar to ping but funner to type
                 elif inString[0:4] is "cube":
@@ -1501,6 +1500,8 @@ try:
     clockTimer = 2
     pingTimer = 1
     
+    lastWholeNumber = 0
+    
     numLogs = 0
     
     # Visual startup
@@ -1510,7 +1511,9 @@ try:
     while True:
         Commands.update()
 
-        if abs(clock.monotonic()%clockTimer) == 0:
+        roundedMonotonic = round(clock.monotonic())
+        if roundedMonotonic != lastWholeNumber and abs(roundedMonotonic%clockTimer) == 0:
+            lastWholeNumber = roundedMonotonic
             processCommand(str(radio.readIncoming())) # Process incoming commands
             sendData() # Send any data that is toggled to be sent
             saveAllData() # Save all data to log files on SD
