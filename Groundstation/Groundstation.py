@@ -31,6 +31,8 @@ try:
     timeColor = '\033[97m'
     resetColor = '\033[0m'
     
+    cur_log_num = 0
+    
     def log(string, includeTime=True, doTextColor=True):
         # include time adds [xx:xx:xx] before the given string
         if includeTime :
@@ -216,7 +218,7 @@ try:
                 clock.sleep(0.5)
     
     def decodeData(packet):
-        global totalGpsMeasurements, totalAltMeasurements, totalImuMeasurements, totalMagMeasurements
+        global totalGpsMeasurements, totalAltMeasurements, totalImuMeasurements, totalMagMeasurements, cur_log_num
         try:
             newPacket = ""
             savePacketCasing = packet
@@ -225,7 +227,8 @@ try:
                 return ""
             splitPacket = packet.split()
             pkt = splitPacket[0]
-            time_value = clock.monotonic()
+            cur_log_num += 1
+            time_value = cur_log_num*2
 
             if pkt == "gps":
                 if len(splitPacket) < 4:
@@ -309,8 +312,10 @@ try:
                     newPacket = savePacketCasing
 
             elif pkt == "err":
+                cur_log_num -= 1
                 newPacket = "ERROR: " + savePacketCasing[4:]
             else:
+                cur_log_num -= 1
                 newPacket = savePacketCasing
 
             return newPacket
